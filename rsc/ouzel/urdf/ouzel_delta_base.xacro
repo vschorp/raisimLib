@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2015 Fadri Furrer, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Michael Burri, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Mina Kamel, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Janosch Nikolic, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Markus Achtelik, ASL, ETH Zurich, Switzerland
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<robot name="$(arg mav_name)" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find rotors_description)/urdf/component_snippets.xacro"/>
+
+  <!-- Instantiate OMAV "mechanics". -->
+  <xacro:property name="mounting_roll" value="$(arg model_roll)" />
+  <xacro:include filename="$(find mav_description)/urdf/omav.xacro"/>
+
+  <!-- Instantiate a controller. -->
+  <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu"/>
+
+  <!-- Mount an ADIS16448 IMU. -->
+  <!-- Note that the gyroscope_noise_density is not the discrete noise density used in the simulation. In gazebo_imu_plugin, the discrete noise density is computed as 1/sqrt(dt)*gyroscope_noise_density, where dt the time step in simulation -->
+  <xacro:imu_plugin_macro
+    namespace="${namespace}"
+    imu_suffix=""
+    parent_link="${namespace}/base_link_inertia"
+    imu_topic="imu"
+    mass_imu_sensor="0.015"
+    gyroscope_noise_density="0.00005366563"
+    gyroscope_random_walk="0.000038785"
+    gyroscope_bias_correlation_time="1000.0"
+    gyroscope_turn_on_bias_sigma="0.0087"
+    accelerometer_noise_density="0.004"
+    accelerometer_random_walk="0.006"
+    accelerometer_bias_correlation_time="300.0"
+    accelerometer_turn_on_bias_sigma="0.1960"
+    measurement_divisor="2">
+    <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:imu_plugin_macro>
+
+  <xacro:if value="$(arg enable_ground_truth)">
+      <xacro:ground_truth_imu_and_odometry
+        namespace="${namespace}"
+        parent_link="${namespace}/base_link_inertia"/>
+  </xacro:if>
+
+  <xacro:if value="$(arg enable_logging)">
+      <!-- Instantiate a logger. -->
+      <xacro:bag_plugin_macro
+        namespace="${namespace}"
+        bag_file="$(arg log_file)"
+        rotor_velocity_slowdown_sim="${rotor_velocity_slowdown_sim}"
+        wait_to_record_bag="$(arg wait_to_record_bag)"/>
+  </xacro:if>
+
+  <!-- Add manipulator. -->
+  <xacro:property name="robot_name" value="delta" />
+  <xacro:property name="delta_namespace" value="delta" />
+  <xacro:property name="mounting_link" value="$(arg mav_name)/base_link" />
+  <xacro:property name="height_offset" value="0.073" />
+  <xacro:include filename="$(find rotors_description)/urdf/delta_manipulator.xacro" />
+  <xacro:include filename="$(find rotors_description)/urdf/delta_actuators.xacro" />
+
+  <xacro:if value="$(arg add_rgbd_sensor)">
+    <!-- Add a RGB-D sensor -->
+    <xacro:include filename="$(find mav_description)/urdf/pmd_monstar.xacro"/>
+    <joint name="${namespace}/tof_cam_optical_frame" type="fixed">
+       <origin xyz="0.09 0.0 0.15" rpy="-1.309 0 -1.571"/>
+       <parent link="${namespace}/base_link" />
+       <child link="rgbd_camera/base_link" />
+    </joint>
+  </xacro:if>
+
+  <!-- Add odometry. -->
+  <xacro:include filename="$(find mav_description)/urdf/odometry_sensor_smooth.xacro"/>
+
+</robot>
