@@ -6,16 +6,66 @@ environment:
 # just testing commenting
   num_envs: 100
   eval_every_n: 10 #200
-  num_threads: 30
+  num_threads: 14 #30
   simulation_dt: 0.0025
   control_dt: 0.01
   max_time: 4.0
   reward:
-    forwardVel:
-      coeff: 0.3
-    torque:
-      coeff: -4e-5
+    waypointDist:
+      coeff: -1.0
+#    orientError:
+#      coeff: -1.0
+#    angularVel:
+#      coeff: -0.1
+#    force:
+#      coeff: -0.01
+#    torque:
+#      coeff: -0.01
+
+  controller:
+    use_ext_wrench: 0 # no_external_wrench
+
+    x_gain: 1.0
+    y_gain: 1.0
+    z_gain: 1.0
+
+    lin_p_gain: 20.0
+    lin_i_gain: 0.0
+    lin_d_gain: 5.0
+
+    roll_gain: 1.0
+    pitch_gain: 1.0
+    yaw_gain: 0.5
+
+    ang_p_gain: 35.0
+    ang_i_gain: 0.0
+    ang_d_gain: 12.0
+
+    pos_err_max: 0.0
+    max_linear_accel: 7.0
+    max_angular_accel: 50.0
+    position_integrator_limit: 1.0
+    attitude_integrator_limit: 1.0
+
+    tool_virtual_mass: 1.0
+    base_virtual_mass: 1.0
+    base_virtual_inertia: 1.0
+
+    range_d_min: -0.1
+    range_d_max: 0.1
+    virtual_mass_decay: 0.1
+
+    force_integrator_limit: 5.0
+    force_p_gain: 0.1
+    force_i_gain: 0.4
+    use_force_control: False
+
+    vehicle_params: # from ouzel minimal
+      mass: 4.6
+      inertia: { xx: 0.06, xy: 0.0, xz: 0.0, yy: 0.06, yz: 0.0, zz: 0.15 }
+      com_offset: { x: 0.015, y: 0.0, z: 0.015 }
+      gravity: 9.81
 
 architecture:
-  policy_net: [128, 128]
-  value_net: [128, 128]
+  policy_net: [64, 64]
+  value_net: [64, 64]

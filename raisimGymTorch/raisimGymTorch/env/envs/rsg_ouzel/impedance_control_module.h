@@ -16,17 +16,14 @@
  *
  */
 
-// dynamic reconfiguration
-#include <rw_omav_controllers/ImpedanceControlModuleConfig.h>
+// Eigen library definitions
+//#include <eigen_conversions/eigen_msg.h>
+#include <Eigen/Core>
+#include "Yaml.hpp"
 
-// parent class
-#include <rw_module_base/controller_base.h>
-
-// messages
-#include <rw_omav_controllers/ErrorVectorImpedance.h>
+#include "eigen_mav_msgs.h"
 
 namespace rw_omav_controllers {
-
     static constexpr double kDefaultPositioniGain = 0.0;
     static constexpr double kDefaultAttitudeiGain = 0.0;
     static constexpr double kDefaultPositionGain = 6.0;
@@ -113,41 +110,14 @@ namespace rw_omav_controllers {
     };
 
     /// implements impedance control
-    class ImpedanceControlModule : public rw_module_base::ControllerBase {
+    class ImpedanceControlModule {
     public:
         /// class constructor
-        ImpedanceControlModule(
-                const ros::NodeHandle& nh, const ros::NodeHandle& private_nh,
-                rw_module_base::ModuleMediator* mediator,
-                const std::string name = "omav_impedance_control_module");
+        ImpedanceControlModule(const Yaml::Node& cfg);
 
         /// class destructor
         ~ImpedanceControlModule() {}
 
-    protected:
-        /// see ModuleBase
-        bool runImpl(const double& dt);
-
-        /**
-         * \brief overwritten frame update handler
-         * \param[in] frames new frame information
-         */
-        bool onFrameUpdate(const rw_control_utils::FrameIDs& frames) {
-            T_T_B_ = frames.T_tool_base;
-            return true;
-        }
-
-        /**
-         * \brief overwritten range sensor update handler
-         * \param[in] range_sensor new range sensor measurement
-         */
-        bool onRangeSensorUpdate(const geometry_msgs::PointStamped& range_sensor) {
-            measured_range_timestamp_ = range_sensor.header.stamp;
-            measured_range_tool_ = range_sensor.point.z;
-            return true;
-        }
-
-    private:
         /**
          * \brief compute wrench command based on saved reference
          * \param[out] wrench_command computed wrench command
@@ -155,29 +125,12 @@ namespace rw_omav_controllers {
         virtual void calculateWrenchCommand(
                 mav_msgs::EigenTorqueThrust* wrench_command, const double sampling_time);
 
-        void computeAdaptedReference();
-
-        /**
-       * \brief dynamic controller parameter configuration service callback
-       * \param[in] config new parameters
-       */
-        void impedanceParamCallback(
-                rw_omav_controllers::ImpedanceControlModuleConfig& config,
-                uint32_t level);
-
-        /// service callback to reset the integrators
-        bool resetIntegratorsCallback(std_srvs::Empty::Request& req,
-                                      std_srvs::Empty::Response& res);
-
-        /// initialize controller parameters
-        void initializeParameters();
-
+    private:
         /**
          * \brief overwrite controller parameters with new values
-         * \param[in] control_params new controller parameters
+         * \param[in] cfg overwrite control parameters with those from config file.
          */
-        void setControllerParameters(
-                const ImpedanceControlModuleParameters control_params);
+        void setControllerParameters(const Yaml::Node& cfg);
 
         /**
          * \brief compute state errors based on current odometry and reference
@@ -259,6 +212,7 @@ namespace rw_omav_controllers {
                                         const Eigen::Vector3d& ref,
                                         const double& sample_time) const;
 
+
         /// resets position and attitude integrators in PID controller
         virtual void resetIntegrators();
 
@@ -304,37 +258,26 @@ namespace rw_omav_controllers {
          *    - current tracking error
          *    - computation time
          */
-        void publishForDebug(const Eigen::VectorXd& error_vector,
-                             const double& computation_time,
-                             const mav_msgs::EigenTorqueThrust& ext_wrench);
 
-        /// ros node handles
-        ros::NodeHandle nh_, private_nh_;
 
         /// Controller parameters
         ImpedanceControlModuleParameters control_params_;
 
-        /// Dynamic reconfigure
-        dynamic_reconfigure::Server<rw_omav_controllers::ImpedanceControlModuleConfig>
-                control_param_server_;
-
-        /// integrator reset service
-        ros::ServiceServer integrator_reset_service_;
-
         /// vehicle frame information
         Eigen::Affine3d T_T_B_;
 
-        /// range sensor data
-        ros::Time measured_range_timestamp_;
-        double measured_range_tool_;
-
-        /// Publishers for debug.
-        bool publish_debug_;
-        ros::Publisher debug_error_pub_;
-        ros::Publisher debug_ext_wrench_pub_;
-
         Eigen::Vector3d position_error_integrator_;
         Eigen::Vector3d attitude_error_integrator_;
+
+        // common controller variables
+        mav_msgs::EigenTrajectoryPoint ref_;
+        mav_msgs::EigenOdometry odom_;
+        mav_msgs::EigenTorqueThrust wrench_est_;
+        mav_msgs::EigenTorqueThrust wrench_sensor_;
+        double mass_;
+        double gravity_;
+        Eigen::Vector3d com_offset_;
+        Eigen::Matrix3d inertia_;
     };
 
 }  // namespace rw_omav_controllers
