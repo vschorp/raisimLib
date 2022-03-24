@@ -125,6 +125,14 @@ namespace rw_omav_controllers {
         virtual void calculateWrenchCommand(
                 mav_msgs::EigenTorqueThrust* wrench_command, const double sampling_time);
 
+        void setOdom(const Eigen::Vector3d& _position,
+                     const Eigen::VectorXd& _orientation,
+                     const Eigen::Vector3d& _velocity_body,
+                     const Eigen::Vector3d& _angular_velocity);
+
+        void setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Vector3d& _orientation_vec_1, const Eigen::Vector3d& _orientation_vec_2);
+        void setRef(const Eigen::Vector3d& _position, const Eigen::Quaterniond& _orientation);
+
     private:
         /**
          * \brief overwrite controller parameters with new values
@@ -134,7 +142,7 @@ namespace rw_omav_controllers {
 
         /**
          * \brief compute state errors based on current odometry and reference
-         * \param[out] position_error_B body frame position error
+        * \param[out] position_error_B body frame position error
          * \param[out] velocity_error_B body frame velocity error
          * \param[out] attitude_error_B body frame attitude error
          * \param[out] rate_error_B body frame angular rate error
@@ -250,16 +258,6 @@ namespace rw_omav_controllers {
          */
         double clamp(const double& a, const double& min, const double& max) const;
 
-        /**
-         * \brief publishes debug information
-         * \param[in] error_vector current tracking error
-         *
-         * Publishes information about:
-         *    - current tracking error
-         *    - computation time
-         */
-
-
         /// Controller parameters
         ImpedanceControlModuleParameters control_params_;
 
@@ -274,10 +272,14 @@ namespace rw_omav_controllers {
         mav_msgs::EigenOdometry odom_;
         mav_msgs::EigenTorqueThrust wrench_est_;
         mav_msgs::EigenTorqueThrust wrench_sensor_;
+
         double mass_;
         double gravity_;
         Eigen::Vector3d com_offset_;
         Eigen::Matrix3d inertia_;
+
+        Eigen::Vector3d ref_position_;
+        Eigen::Quaterniond ref_quaternion_;
     };
 
 }  // namespace rw_omav_controllers

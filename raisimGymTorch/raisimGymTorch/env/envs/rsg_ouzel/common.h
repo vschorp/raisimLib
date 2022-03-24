@@ -31,6 +31,9 @@ namespace mav_msgs {
 const double kSmallValueCheck = 1.e-6;
 const double kNumNanosecondsPerSecond = 1.e9;
 
+///// Actuated degrees of freedom.
+//    enum MavActuation { DOF4 = 4, DOF6 = 6 , DOF12 = 12};
+
 /// Magnitude of Earth's gravitational field at specific height [m] and latitude
 /// [rad] (from wikipedia).
 inline double MagnitudeOfGravity(const double height,
@@ -92,6 +95,7 @@ inline bool vectorFromSkewMatrix(const Eigen::Matrix3d& vec_skew,
     return true;
   } else {
     std::cerr << "[mav_msgs] Matrix is not skew-symmetric." << std::endl;
+    std::cout << vec_skew << std::endl;
     *vec = Eigen::Vector3d::Zero();
     return false;
   }

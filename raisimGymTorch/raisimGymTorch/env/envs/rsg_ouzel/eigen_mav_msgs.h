@@ -30,7 +30,7 @@
 namespace mav_msgs {
   
 /// Actuated degrees of freedom.
-enum MavActuation { DOF4 = 4, DOF6 = 6 };
+enum MavActuation { DOF4 = 4, DOF6 = 6 , DOF12 = 12};
 
 struct EigenAttitudeThrust {
   EigenAttitudeThrust()
@@ -176,7 +176,7 @@ struct EigenTrajectoryPoint {
         angular_acceleration_W(Eigen::Vector3d::Zero()),
         force_W(Eigen::Vector3d::Zero()),
         torque_W(Eigen::Vector3d::Zero()),
-        degrees_of_freedom(MavActuation::DOF4) {}
+        degrees_of_freedom(MavActuation::DOF12) {}
 
   EigenTrajectoryPoint(int64_t _time_from_start_ns,
                        const Eigen::Vector3d& _position,

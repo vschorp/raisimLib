@@ -157,6 +157,9 @@ namespace rw_omav_controllers {
 
     void ImpedanceControlModule::setControllerParameters(const Yaml::Node& cfg) {
       // general config
+//      std::cout << cfg["use_ext_wrench"].template As<int>() << std::endl;
+//      std::cout << cfg["x_gain"].template As<float>() << std::endl;
+//      std::cout << cfg["use_force_control"].template As<bool>() << std::endl;
       control_params_.use_ext_wrench = cfg["use_external_wrench"].template As<int>();
 
       // translational controller gains
@@ -439,6 +442,49 @@ namespace rw_omav_controllers {
       if (a < min) return min;
       if (a > max) return max;
       return a;
+    }
+
+    void ImpedanceControlModule::setOdom(const Eigen::Vector3d& _position,
+                                         const Eigen::VectorXd& _orientation,
+                                         const Eigen::Vector3d& _velocity_body,
+                                         const Eigen::Vector3d& _angular_velocity) {
+      odom_.position_W = _position;
+      Eigen:: Matrix3d rot_mat;
+      rot_mat.col(0) = _orientation.segment(0, 3);
+      rot_mat.col(1) = _orientation.segment(3, 3);
+      rot_mat.col(2) = _orientation.segment(6, 3);
+      odom_.orientation_W_B = Eigen::Quaterniond(rot_mat);
+      odom_.velocity_B = _velocity_body;
+      odom_.angular_velocity_B = _angular_velocity;
+    }
+
+    void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Vector3d& _orientation_vec_1, const Eigen::Vector3d& _orientation_vec_2) {
+      ref_.position_W = ref_position_ + _position_corr;
+      Eigen::Quaterniond corr_quaternion;
+      // Gram-Schmidt
+      if (_orientation_vec_1.norm() > 0 && _orientation_vec_2.norm() > 0 && _orientation_vec_1.cross(_orientation_vec_2).norm() > 0) {
+        Eigen::Vector3d e1 = _orientation_vec_1 / _orientation_vec_1.norm();
+        Eigen::Vector3d u2 = _orientation_vec_2 - e1.dot(_orientation_vec_2) * e1;
+        Eigen::Vector3d e2 = u2 / u2.norm();
+        Eigen::Matrix3d orientation_mat;
+        orientation_mat.col(0) = e1;
+        orientation_mat.col(1) = e2;
+        orientation_mat.col(2) = e1.cross(e2);
+        corr_quaternion = Eigen::Quaterniond(orientation_mat);
+      } else {
+        corr_quaternion = Eigen::Quaterniond(1, 0, 0, 0);
+      }
+
+      ref_.orientation_W_B.w() = ref_quaternion_.w() + corr_quaternion.w();
+      ref_.orientation_W_B.vec() = ref_quaternion_.vec() + corr_quaternion.vec();
+    }
+
+    void ImpedanceControlModule::setRef(const Eigen::Vector3d& _position, const Eigen::Quaterniond& _orientation) {
+      ref_position_ = _position;
+      ref_quaternion_ = _orientation;
+
+      ref_.position_W = ref_position_;
+      ref_.orientation_W_B = ref_quaternion_;
     }
 
 }  // namespace rw_omav_controllers

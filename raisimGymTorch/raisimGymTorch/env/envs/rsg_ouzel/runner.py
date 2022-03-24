@@ -1,6 +1,6 @@
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymTorch.env.bin.rsg_anymal import RaisimGymEnv
-from raisimGymTorch.env.bin.rsg_anymal import NormalSampler
+from raisimGymTorch.env.bin.rsg_ouzel import RaisimGymEnv
+from raisimGymTorch.env.bin.rsg_ouzel import NormalSampler
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 from raisimGymTorch.helper.raisim_gym_helper import ConfigurationSaver, load_param, tensorboard_launcher
 import os
@@ -16,7 +16,7 @@ import argparse
 
 
 # task specification
-task_name = "anymal_locomotion"
+task_name = "ouzel_only_planning"
 
 # configuration
 parser = argparse.ArgumentParser()
@@ -50,19 +50,19 @@ total_steps = n_steps * env.num_envs
 
 avg_rewards = []
 
-actor = ppo_module.Actor(ppo_module.MLP(cfg['architecture']['policy_net'], nn.LeakyReLU, ob_dim, act_dim),
+actor = ppo_module.Actor(ppo_module.MLP(cfg['architecture']['policy_net'], nn.Tanh, ob_dim, act_dim),
                          ppo_module.MultivariateGaussianDiagonalCovariance(act_dim,
                                                                            env.num_envs,
                                                                            1.0,
                                                                            NormalSampler(act_dim),
                                                                            cfg['seed']),
                          device)
-critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], nn.LeakyReLU, ob_dim, 1),
+critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], nn.Tanh, ob_dim, 1),
                            device)
 
 saver = ConfigurationSaver(log_dir=home_path + "/raisimGymTorch/data/"+task_name,
                            save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp"])
-tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
+# tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
 
 ppo = PPO.PPO(actor=actor,
               critic=critic,
@@ -111,7 +111,7 @@ for update in range(1000000):
                 frame_end = time.time()
                 wait_time = cfg['environment']['control_dt'] - (frame_end-frame_start)
                 if wait_time > 0.:
-                    time.sleep(wait_time)
+                    time.sleep(wait_time) #TODO: is that needed ?
 
         env.stop_video_recording()
         env.turn_off_visualization()
@@ -136,7 +136,7 @@ for update in range(1000000):
     avg_rewards.append(average_ll_performance)
 
     actor.update()
-    actor.distribution.enforce_minimum_std((torch.ones(12)*0.2).to(device))
+    actor.distribution.enforce_minimum_std((torch.ones(act_dim)*0.2).to(device))
 
     # curriculum update. Implement it in Environment.hpp
     env.curriculum_callback()

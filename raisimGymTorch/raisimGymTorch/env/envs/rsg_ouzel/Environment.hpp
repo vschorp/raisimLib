@@ -7,6 +7,9 @@
 
 #include <stdlib.h>
 #include <set>
+#include <functional>
+#include <algorithm>
+
 #include "../../RaisimGymEnv.hpp"
 #include "impedance_control_module.h"
 
@@ -17,13 +20,21 @@ class ENVIRONMENT : public RaisimGymEnv {
  public:
 
   explicit ENVIRONMENT(const std::string& resourceDir, const Yaml::Node& cfg, bool visualizable) :
-      RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable), normDist_(0, 1), controller_(cfg["controller"]) {
+      RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable), unifDistZeroOne_(0.0, 1.0), controller_(cfg["controller"]) {
 
     /// create world
     world_ = std::make_unique<raisim::World>();
 
     /// add objects
-    ouzel_ = world_->addArticulatedSystem(resourceDir_+"/ouzel/urdf/model.urdf"); //used to be anymal.xacro
+//    parseURDF();
+//    std::ofstream myfile;
+//    myfile.open (ros::package::getPath("ros_raisim_interface") + "/resource/temp.urdf", std::ios::out);
+//    myfile << *urdf_;
+//    myfile.close();
+    ouzel_ = world_->addArticulatedSystem(resourceDir_ + "/ouzel/temp.urdf");
+
+//    std::string baseLink = ouzel_->getBodyIdx("ouzel/base_link");
+//    ouzel_ = world_->addArticulatedSystem(resourceDir_+"/ouzel/urdf/model.urdf"); //used to be anymal.urdf
     ouzel_->setName("ouzel");
     ouzel_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
 //    world_->addGround(); // we don't need a ground for the drone
@@ -37,10 +48,20 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_); gv_init_.setZero(gvDim_);
     pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
+    sampling_time_ = cfg["simulation_dt"].template As<float>();
 
     /// this is nominal configuration of anymal
-    //TODO adapt nominal configuration of ouzel -> should be random (regulate to 0)
-    gc_init_ << 0, 0, 0.50, 1.0, 0.0, 0.0, 0.0, 0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8;
+    //TODO adapt nominal configuration of ouzel
+    Eigen::Quaterniond init_quaternion = Eigen::Quaterniond::UnitRandom();
+    gc_init_ << unifDistZeroOne_(gen_), unifDistZeroOne_(gen_), unifDistZeroOne_(gen_), // position
+                init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+    /// set reference_
+    ref_position_ << unifDistZeroOne_(gen_), unifDistZeroOne_(gen_), unifDistZeroOne_(gen_);
+    Eigen::Quaterniond ref_quaternion = Eigen::Quaterniond::UnitRandom();
+    ref_orientation_ = ref_quaternion.toRotationMatrix();
+    controller_.setRef(ref_position_, ref_quaternion);
 
     /// set pd gains
 //    Eigen::VectorXd jointPgain(gvDim_), jointDgain(gvDim_);
@@ -50,8 +71,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    anymal_->setGeneralizedForce(Eigen::VectorXd::Zero(gvDim_));
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 12;
-    actionDim_ =  6;
+    obDim_ = 30;
+    actionDim_ =  9;
     actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
     obDouble_.setZero(obDim_);
 
@@ -81,21 +102,28 @@ class ENVIRONMENT : public RaisimGymEnv {
   void reset() final {
     ouzel_->setState(gc_init_, gv_init_);
     updateObservation();
+//    auto base_link_idx = ouzel_->getBodyIdx("ouzel/base_link");
+//    raisim::Vec<3> base_link_pos_W;
+//    ouzel_->getFramePosition(base_link_idx, base_link_pos_W);
+//    std::cout << "none" << std::endl;
   }
 
   float step(const Eigen::Ref<EigenVec>& action) final {
     // give adapted waypoint to controller -> get wrench
+//    std::cout << "action: " << action << std::endl;
+    auto actionD = action.cast<double>();
+    controller_.setOdom(obDouble_.segment(0, 3), obDouble_.segment(3, 9), obDouble_.segment(12, 3), obDouble_.segment(15, 3));
+    controller_.setRefFromAction(actionD.segment(0, 3), actionD.segment(3, 3), actionD.segment(6, 3));
     mav_msgs::EigenTorqueThrust wrench_command;
-    //TODO adapt sampling time
-    double sampling_time = 0.0;
-    controller_.calculateWrenchCommand(&wrench_command, sampling_time);
-
-    // apply wrench on ouzel
-    // TODO: check body index and wrench command frame
-    ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.thrust);
-    ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
+    controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
+//    std::cout << "commanded thrust: " << wrench_command.thrust << " commanded torque: " << wrench_command.torque << std::endl;
 
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
+      // apply wrench on ouzel
+      // TODO: check body index and wrench command frame
+      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.thrust);
+      ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
+
       if(server_) server_->lockVisualizationServerMutex();
       world_->integrate();
       if(server_) server_->unlockVisualizationServerMutex();
@@ -105,12 +133,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     updateObservation();
 
     Vec<3> position; Mat<3, 3> orientation;
-    ouzel_->getLink("ouzel/base_link").getPose(position, orientation);
-//    ouzel_->getState(gc_, gv_);
-
-    //compute rewards
-    rewards_.record("waypointDist", position.squaredNorm());
-//    rewards_.record("orientError", anymal_->getGeneralizedForce().squaredNorm());
+    ouzel_->getLink("ouzel/base_link").getPosition(position);
+//    std::cout << "waypointDist: " << (position.e() - ref_position_).squaredNorm() << std::endl;
+    double waypoint_dist_clamped = std::min(1000.0, (position.e() - ref_position_).squaredNorm());
+    rewards_.record("waypointDist", waypoint_dist_clamped);
+//    rewards_.record("orientError", anymal_->g`etGeneralizedForce().squaredNorm());
 //    rewards_.record("angularVel", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("force", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("torque", anymal_->getGeneralizedForce().squaredNorm());
@@ -129,13 +156,21 @@ class ENVIRONMENT : public RaisimGymEnv {
     bodyAngularVel_ = rot.e().transpose() * gv_.segment(3, 3);
 
     obDouble_ << gc_.segment(0,3), /// body position
-        rot.e().col(0), rot.e().col(1), /// body orientation
-        bodyLinearVel_, bodyAngularVel_; /// body linear&angular velocity
+        rot.e().col(0), rot.e().col(1), rot.e().col(2), /// body orientation
+        bodyLinearVel_, bodyAngularVel_, /// body linear&angular velocity
+        ref_position_,/// ref position
+        ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2); /// ref orientation
+
+//    std::cout << "observation:\n" << obDouble_ << std::endl;
   }
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     /// convert it to float
-    ob = obDouble_.cast<float>();
+//    Eigen::VectorXf obFloat = obDouble_.cast<float>();
+//    Eigen::Quaternionf quat(obFloat.segment(3, 4));
+//    Eigen::Matrix3f rot_mat = quat.toRotationMatrix();
+//    ob << obFloat.segment(0, 3), rot_mat.col(0), rot_mat.col(1), rot_mat.col(2), obFloat.segment(7, 6);
+      ob = obDouble_.cast<float>();
   }
 
   bool isTerminalState(float& terminalReward) final {
@@ -143,7 +178,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     Vec<3> position;
     ouzel_->getLink("ouzel/base_link").getPosition(position);
-    if(position.squaredNorm() > terminalDistToOrigin_)
+    if((position.e() - ref_position_).squaredNorm() > terminalWaypointDist)
       return true;
 
     terminalReward = 0.f;
@@ -158,16 +193,20 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim::ArticulatedSystem* ouzel_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, pTarget_, pTarget12_, vTarget_;
   double terminalRewardCoeff_ = -10.;
-  double terminalDistToOrigin_ = 5.0;
+  double terminalWaypointDist = 5.0;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector3d bodyLinearVel_, bodyAngularVel_;
   std::set<size_t> footIndices_;
+  double sampling_time_;
+  Eigen::Vector3d ref_position_;
+  Eigen::Matrix3d ref_orientation_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 
   /// these variables are not in use. They are placed to show you how to create a random number sampler.
-  std::normal_distribution<double> normDist_;
+  //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
+  std::uniform_real_distribution<double> unifDistZeroOne_;
 };
 thread_local std::mt19937 raisim::ENVIRONMENT::gen_;
 
