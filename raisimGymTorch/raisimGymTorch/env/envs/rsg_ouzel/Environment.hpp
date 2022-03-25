@@ -49,36 +49,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
     sampling_time_ = cfg["control_dt"].template As<float>();
 
-    /// this is nominal configuration of anymal
-    //TODO adapt nominal configuration of ouzel
-    Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
-    init_orientation.normalize();
-    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
-    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
-    gc_init_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), // position
-                init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-
-    /// set reference_
-    ref_position_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_);
-
-    Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
-    ref_delta_orientation.normalize();
-    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 20.0 / 180.0 * M_PI;
-    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
-    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
-    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
-    Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
-
-    ref_orientation_ = ref_quaternion.toRotationMatrix();
-    controller_.setRef(ref_position_, ref_quaternion);
-
-    /// set pd gains
-//    Eigen::VectorXd jointPgain(gvDim_), jointDgain(gvDim_);
-//    jointPgain.setZero(); jointPgain.tail(nJoints_).setConstant(50.0);
-//    jointDgain.setZero(); jointDgain.tail(nJoints_).setConstant(0.2);
-//    anymal_->setPdGains(jointPgain, jointDgain);
-//    anymal_->setGeneralizedForce(Eigen::VectorXd::Zero(gvDim_));
+    resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
     obDim_ = 30;
@@ -110,7 +81,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   void init() final { }
 
   void reset() final {
-    // TODO reset random ref and init
+    resetInitialConditions();
     ouzel_->setState(gc_init_, gv_init_);
     updateObservation();
 //    auto base_link_idx = ouzel_->getBodyIdx("ouzel/base_link");
@@ -145,12 +116,10 @@ class ENVIRONMENT : public RaisimGymEnv {
     // get observations
     updateObservation();
 
-    Vec<3> position; Mat<3, 3> orientation;
-    ouzel_->getLink("ouzel/base_link").getPosition(position);
-//    std::cout << "waypointDist: " << (position.e() - ref_position_).squaredNorm() << std::endl;
-    double waypoint_dist_clamped = std::min(1000.0, (position.e() - ref_position_).squaredNorm());
-    rewards_.record("waypointDist", waypoint_dist_clamped);
-//    rewards_.record("orientError", anymal_->g`etGeneralizedForce().squaredNorm());
+    double waypoint_dist, error_angle;
+    computeErrorMetrics(waypoint_dist, error_angle);
+    rewards_.record("waypointDist", waypoint_dist);
+    rewards_.record("orientError", error_angle);
 //    rewards_.record("angularVel", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("force", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("torque", anymal_->getGeneralizedForce().squaredNorm());
@@ -198,11 +167,9 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool isTerminalState(float& terminalReward) final {
     terminalReward = float(terminalRewardCoeff_);
 
-    auto waypoint_dist = (gc_.segment(0, 3) - ref_position_).squaredNorm();
-    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
-    auto error_quat = Eigen::Quaterniond (ref_orientation_) * current_quat.inverse();
-    Eigen::AngleAxisd error_angle_axis(error_quat);
-    if( waypoint_dist > terminalWaypointDist || error_angle_axis.angle() > terminalAngleError)
+    double waypoint_dist, error_angle;
+    computeErrorMetrics(waypoint_dist, error_angle);
+    if( waypoint_dist > terminalWaypointDist || error_angle > terminalAngleError)
       return true;
 
     terminalReward = 0.f;
@@ -212,6 +179,40 @@ class ENVIRONMENT : public RaisimGymEnv {
   void curriculumUpdate() { };
 
  private:
+  void resetInitialConditions() {
+    Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    init_orientation.normalize();
+    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
+    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
+    gc_init_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), // position
+            init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+    // reset reference
+    ref_position_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_);
+
+    Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    ref_delta_orientation.normalize();
+    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 20.0 / 180.0 * M_PI;
+//    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
+//    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
+    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
+    Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
+
+    ref_orientation_ = ref_quaternion.toRotationMatrix();
+    controller_.setRef(ref_position_, ref_quaternion);
+  }
+
+  void computeErrorMetrics(double& waypointDist, double& errorAngle) {
+    // Maybe want to clamp the error terms?
+    waypointDist = (gc_.segment(0, 3) - ref_position_).squaredNorm();
+
+    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
+    auto error_quat = Eigen::Quaterniond (ref_orientation_) * current_quat.inverse();
+    Eigen::AngleAxisd error_angle_axis(error_quat);
+    errorAngle = error_angle_axis.angle();
+  }
+
   int gcDim_, gvDim_, nJoints_;
   bool visualizable_ = false;
   raisim::ArticulatedSystem* ouzel_;

@@ -4,15 +4,17 @@ record_video: yes
 environment:
   render: True
 # just testing commenting
-  num_envs: 2 #100
-  eval_every_n: 100 #200
-  num_threads: 2 #30
+  num_envs: 14 #100
+  eval_every_n: 200 #200
+  num_threads: 14 #30
   simulation_dt: 0.0025
   control_dt: 0.01
   max_time: 4.0
   test: 3.0
   reward:
     waypointDist:
+      coeff: -1.0
+    orientError:
       coeff: -1.0
   controller:
     use_ext_wrench: 0

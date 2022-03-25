@@ -141,9 +141,9 @@ namespace rw_omav_controllers {
       (*wrench_command).thrust = mass_ * linear_accel_B_des;
       (*wrench_command).torque = inertia_ * angular_accel_B_des;
 
-      if (wrench_command->thrust.norm() > 1000 || wrench_command->torque.norm() > 1000) {
-        std::cout << "warning: high wrench" << std::endl;
-      }
+//      if (wrench_command->thrust.norm() > 1000 || wrench_command->torque.norm() > 1000) {
+//        std::cout << "warning: high wrench" << std::endl;
+//      }
     }
 
     void ImpedanceControlModule::computeForceControlCommand(
@@ -495,7 +495,7 @@ namespace rw_omav_controllers {
         orientation_mat.col(2) = e1.cross(e2);
 
         Eigen::AngleAxisd corr_angle_axis(orientation_mat);
-        double angle_scaled = std::tanh(corr_angle_axis.angle()) * 20.0 / 180.0 * M_PI ; // Tuned
+        double angle_scaled = std::tanh(corr_angle_axis.angle()) * 5.0 / 180.0 * M_PI ; // Tuned
         Eigen::AngleAxisd corr_angle_axis_scaled(angle_scaled, corr_angle_axis.axis());
         Eigen::Quaterniond corr_quaternion_scaled(corr_angle_axis_scaled);
 
