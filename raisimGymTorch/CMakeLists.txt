@@ -72,7 +72,8 @@ find_package(raisim CONFIG REQUIRED)
 #######################
 ### src and linking ###
 #######################
-SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
+set(SUBDIRS rsg_ouzel)
+#SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
 set(RAISIMGYM_ENV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
 
 ######## Env ##########
