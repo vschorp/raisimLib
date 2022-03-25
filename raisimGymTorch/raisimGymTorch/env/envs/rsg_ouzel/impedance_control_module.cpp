@@ -36,6 +36,11 @@ namespace rw_omav_controllers {
       computeStateError(&position_error_B, &velocity_error_B, &attitude_error_B,
                         &rate_error_B);
 
+//      std::cout << "position error B: " << position_error_B.norm() << std::endl;
+//      std::cout << "attitude error B: " << attitude_error_B.norm() << std::endl;
+//      std::cout << "lin vel error B: " << velocity_error_B.norm() << std::endl;
+//      std::cout << "rate error error B: " << rate_error_B.norm() << std::endl;
+
       Eigen::Vector3d tool_position_error_B, tool_velocity_error_B;
       computeToolError(&tool_position_error_B, &tool_velocity_error_B);
 
@@ -135,6 +140,10 @@ namespace rw_omav_controllers {
 
       (*wrench_command).thrust = mass_ * linear_accel_B_des;
       (*wrench_command).torque = inertia_ * angular_accel_B_des;
+
+      if (wrench_command->thrust.norm() > 1000 || wrench_command->torque.norm() > 1000) {
+        std::cout << "warning: high wrench" << std::endl;
+      }
     }
 
     void ImpedanceControlModule::computeForceControlCommand(
@@ -455,9 +464,10 @@ namespace rw_omav_controllers {
       rot_mat.col(0) = _orientation.segment(0, 3);
       rot_mat.col(1) = _orientation.segment(3, 3);
       rot_mat.col(2) = _orientation.segment(6, 3);
-//      if (!Eigen::isfinite(rot_mat.array()).all()) {
-//        std::cout << "rot mat: " << rot_mat << std::endl;
-//      }
+      if (!Eigen::isfinite(rot_mat.array()).any()) {
+        std::cout << "odom orientation is nan!!" << std::endl;
+      }
+
       odom_.orientation_W_B = Eigen::Quaterniond(rot_mat);
       odom_.velocity_B = _velocity_body;
       odom_.angular_velocity_B = _angular_velocity;
@@ -469,6 +479,9 @@ namespace rw_omav_controllers {
         ref_.position_W = ref_position_ + position_corr_scaled;
       } else {
         ref_.position_W = ref_position_;
+      }
+      if (!Eigen::isfinite(ref_.position_W.array()).any()) {
+        std::cout << "ref position is nan!!" << std::endl;
       }
 
       if (_orientation_vec_1.norm() > 0 && _orientation_vec_2.norm() > 0 && _orientation_vec_1.cross(_orientation_vec_2).norm() > 0) {
@@ -496,6 +509,9 @@ namespace rw_omav_controllers {
 //        ref_.orientation_W_B.vec() = ref_quaternion_.vec() + corr_quaternion.vec();
       } else {
         ref_.orientation_W_B = ref_quaternion_;
+      }
+      if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
+        std::cout << "ref orientation is nan!!" << std::endl;
       }
     }
 

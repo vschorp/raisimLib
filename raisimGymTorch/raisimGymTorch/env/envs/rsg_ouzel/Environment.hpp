@@ -24,7 +24,6 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     /// create world
     world_ = std::make_unique<raisim::World>();
-
     /// add objects
 //    parseURDF();
 //    std::ofstream myfile;
@@ -37,7 +36,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    ouzel_ = world_->addArticulatedSystem(resourceDir_+"/ouzel/urdf/model.urdf"); //used to be anymal.urdf
     ouzel_->setName("ouzel");
     ouzel_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
-//    world_->addGround(); // we don't need a ground for the drone
+    world_->addGround(-10.0); // we don't need a ground for the drone
 
     /// get robot data
     gcDim_ = ouzel_->getGeneralizedCoordinateDim();
@@ -47,8 +46,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// initialize containers
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_); gv_init_.setZero(gvDim_);
-    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
-    sampling_time_ = cfg["simulation_dt"].template As<float>();
+//    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
+    sampling_time_ = cfg["control_dt"].template As<float>();
 
     /// this is nominal configuration of anymal
     //TODO adapt nominal configuration of ouzel
@@ -66,6 +65,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_orientation.normalize();
     double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 20.0 / 180.0 * M_PI;
+    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
+    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
     Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
     Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
 
@@ -109,6 +110,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   void init() final { }
 
   void reset() final {
+    // TODO reset random ref and init
     ouzel_->setState(gc_init_, gv_init_);
     updateObservation();
 //    auto base_link_idx = ouzel_->getBodyIdx("ouzel/base_link");
@@ -125,13 +127,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     controller_.setRefFromAction(actionD.segment(0, 3), actionD.segment(3, 3), actionD.segment(6, 3));
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
-    std::cout << "commanded thrust: " << wrench_command.thrust << " commanded torque: " << wrench_command.torque << std::endl;
+//    std::cout << "commanded thrust:\n" << wrench_command.thrust << "commanded torque:\n" << wrench_command.torque << std::endl;
 
+    Vec<3> orig;
+    orig.setZero();
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
       // apply wrench on ouzel
       // TODO: check body index and wrench command frame
-      Vec<3> orig;
-      orig.setZero();
       ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
       ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
 
@@ -172,9 +174,14 @@ class ENVIRONMENT : public RaisimGymEnv {
         ref_position_, /// ref position
         ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2); /// ref orientation
 //    std::cout << "ob quat:\n" << quat << std::endl;
-    std::cout << "observation:\n" << obDouble_ << std::endl;
+//    std::cout << "observation:\n" << obDouble_ << std::endl;
+//    std::cout << "lin vel:\n" << bodyLinearVel_ << std::endl;
+//    std::cout << "ang vel:\n" << bodyAngularVel_ << std::endl;
     if (!Eigen::isfinite(gc_.array()).any()) {
       std::cout << "ob is nan!!" << std::endl;
+      std::cout << "ob : " << obDouble_ << std::endl;
+      std::cout << "gc : " << gc_ << std::endl;
+      std::cout << "gv : " << gv_ << std::endl;
       raise(SIGTERM);
     }
   }
@@ -191,9 +198,11 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool isTerminalState(float& terminalReward) final {
     terminalReward = float(terminalRewardCoeff_);
 
-    Vec<3> position;
-    ouzel_->getLink("ouzel/base_link").getPosition(position);
-    if((position.e() - ref_position_).squaredNorm() > terminalWaypointDist)
+    auto waypoint_dist = (gc_.segment(0, 3) - ref_position_).squaredNorm();
+    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
+    auto error_quat = Eigen::Quaterniond (ref_orientation_) * current_quat.inverse();
+    Eigen::AngleAxisd error_angle_axis(error_quat);
+    if( waypoint_dist > terminalWaypointDist || error_angle_axis.angle() > terminalAngleError)
       return true;
 
     terminalReward = 0.f;
@@ -209,6 +218,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, pTarget_, pTarget12_, vTarget_;
   double terminalRewardCoeff_ = -10.;
   double terminalWaypointDist = 5.0;
+  double terminalAngleError = 60.0 / 180.0 * M_PI;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector3d bodyLinearVel_, bodyAngularVel_;
   std::set<size_t> footIndices_;
