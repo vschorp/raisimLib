@@ -20,7 +20,7 @@ class ENVIRONMENT : public RaisimGymEnv {
  public:
 
   explicit ENVIRONMENT(const std::string& resourceDir, const Yaml::Node& cfg, bool visualizable) :
-      RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable), unifDistZeroOne_(0.0, 1.0), controller_(cfg["controller"]) {
+      RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable), unifDistPlusMinusOne_(-1.0, 1.0), controller_(cfg["controller"]) {
 
     /// create world
     world_ = std::make_unique<raisim::World>();
@@ -52,14 +52,23 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     /// this is nominal configuration of anymal
     //TODO adapt nominal configuration of ouzel
-    Eigen::Quaterniond init_quaternion = Eigen::Quaterniond::UnitRandom();
-    gc_init_ << unifDistZeroOne_(gen_), unifDistZeroOne_(gen_), unifDistZeroOne_(gen_), // position
+    Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    init_orientation.normalize();
+    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
+    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
+    gc_init_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), // position
                 init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     /// set reference_
-    ref_position_ << unifDistZeroOne_(gen_), unifDistZeroOne_(gen_), unifDistZeroOne_(gen_);
-    Eigen::Quaterniond ref_quaternion = Eigen::Quaterniond::UnitRandom();
+    ref_position_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_);
+
+    Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    ref_delta_orientation.normalize();
+    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 20.0 / 180.0 * M_PI;
+    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
+    Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
+
     ref_orientation_ = ref_quaternion.toRotationMatrix();
     controller_.setRef(ref_position_, ref_quaternion);
 
@@ -116,12 +125,14 @@ class ENVIRONMENT : public RaisimGymEnv {
     controller_.setRefFromAction(actionD.segment(0, 3), actionD.segment(3, 3), actionD.segment(6, 3));
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
-//    std::cout << "commanded thrust: " << wrench_command.thrust << " commanded torque: " << wrench_command.torque << std::endl;
+    std::cout << "commanded thrust: " << wrench_command.thrust << " commanded torque: " << wrench_command.torque << std::endl;
 
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
       // apply wrench on ouzel
       // TODO: check body index and wrench command frame
-      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.thrust);
+      Vec<3> orig;
+      orig.setZero();
+      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
       ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
 
       if(server_) server_->lockVisualizationServerMutex();
@@ -158,10 +169,14 @@ class ENVIRONMENT : public RaisimGymEnv {
     obDouble_ << gc_.segment(0,3), /// body position
         rot.e().col(0), rot.e().col(1), rot.e().col(2), /// body orientation
         bodyLinearVel_, bodyAngularVel_, /// body linear&angular velocity
-        ref_position_,/// ref position
+        ref_position_, /// ref position
         ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2); /// ref orientation
-
-//    std::cout << "observation:\n" << obDouble_ << std::endl;
+//    std::cout << "ob quat:\n" << quat << std::endl;
+    std::cout << "observation:\n" << obDouble_ << std::endl;
+    if (!Eigen::isfinite(gc_.array()).any()) {
+      std::cout << "ob is nan!!" << std::endl;
+      raise(SIGTERM);
+    }
   }
 
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -206,7 +221,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   /// these variables are not in use. They are placed to show you how to create a random number sampler.
   //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
-  std::uniform_real_distribution<double> unifDistZeroOne_;
+  std::uniform_real_distribution<double> unifDistPlusMinusOne_;
 };
 thread_local std::mt19937 raisim::ENVIRONMENT::gen_;
 

@@ -236,6 +236,8 @@ namespace rw_omav_controllers {
       Eigen::Matrix3d attitude_error_matrix =
               0.5 * (R_W_B_des.transpose() * R_W_B - R_W_B.transpose() * R_W_B_des);
       Eigen::Vector3d att_error_B;
+//      std::cout << "rwb des:\n" << R_W_B_des << std::endl;
+//      std::cout << "rwb:\n" << R_W_B << std::endl;
       mav_msgs::vectorFromSkewMatrix(attitude_error_matrix, &att_error_B);
       *attitude_error_B = att_error_B;
       *rate_error_B = odom_.angular_velocity_B -
@@ -453,16 +455,24 @@ namespace rw_omav_controllers {
       rot_mat.col(0) = _orientation.segment(0, 3);
       rot_mat.col(1) = _orientation.segment(3, 3);
       rot_mat.col(2) = _orientation.segment(6, 3);
+//      if (!Eigen::isfinite(rot_mat.array()).all()) {
+//        std::cout << "rot mat: " << rot_mat << std::endl;
+//      }
       odom_.orientation_W_B = Eigen::Quaterniond(rot_mat);
       odom_.velocity_B = _velocity_body;
       odom_.angular_velocity_B = _angular_velocity;
     }
 
     void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Vector3d& _orientation_vec_1, const Eigen::Vector3d& _orientation_vec_2) {
-      ref_.position_W = ref_position_ + _position_corr;
-      Eigen::Quaterniond corr_quaternion;
-      // Gram-Schmidt
+      if (_position_corr.norm() > 0) {
+        Eigen::Vector3d position_corr_scaled = _position_corr / _position_corr.norm() * std::tanh(_position_corr.norm());
+        ref_.position_W = ref_position_ + position_corr_scaled;
+      } else {
+        ref_.position_W = ref_position_;
+      }
+
       if (_orientation_vec_1.norm() > 0 && _orientation_vec_2.norm() > 0 && _orientation_vec_1.cross(_orientation_vec_2).norm() > 0) {
+        // Gram-Schmidt
         Eigen::Vector3d e1 = _orientation_vec_1 / _orientation_vec_1.norm();
         Eigen::Vector3d u2 = _orientation_vec_2 - e1.dot(_orientation_vec_2) * e1;
         Eigen::Vector3d e2 = u2 / u2.norm();
@@ -470,13 +480,23 @@ namespace rw_omav_controllers {
         orientation_mat.col(0) = e1;
         orientation_mat.col(1) = e2;
         orientation_mat.col(2) = e1.cross(e2);
-        corr_quaternion = Eigen::Quaterniond(orientation_mat);
-      } else {
-        corr_quaternion = Eigen::Quaterniond(1, 0, 0, 0);
-      }
 
-      ref_.orientation_W_B.w() = ref_quaternion_.w() + corr_quaternion.w();
-      ref_.orientation_W_B.vec() = ref_quaternion_.vec() + corr_quaternion.vec();
+        Eigen::AngleAxisd corr_angle_axis(orientation_mat);
+        double angle_scaled = std::tanh(corr_angle_axis.angle()) * 20.0 / 180.0 * M_PI ; // Tuned
+        Eigen::AngleAxisd corr_angle_axis_scaled(angle_scaled, corr_angle_axis.axis());
+        Eigen::Quaterniond corr_quaternion_scaled(corr_angle_axis_scaled);
+
+        ref_.orientation_W_B = ref_quaternion_ * corr_quaternion_scaled;
+//        if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).all()) {
+//          std::cout << "ref orientation wb: " << ref_.orientation_W_B.coeffs()<< std::endl;
+//          std::cout << "ref quaternion: " << ref_quaternion_.coeffs() << std::endl;
+//          std::cout << "corr quaternion" << corr_quaternion_scaled.coeffs() << std::endl;
+//        }
+//        ref_.orientation_W_B.w() = ref_quaternion_.w() + corr_quaternion.w();
+//        ref_.orientation_W_B.vec() = ref_quaternion_.vec() + corr_quaternion.vec();
+      } else {
+        ref_.orientation_W_B = ref_quaternion_;
+      }
     }
 
     void ImpedanceControlModule::setRef(const Eigen::Vector3d& _position, const Eigen::Quaterniond& _orientation) {
