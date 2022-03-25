@@ -71,9 +71,9 @@ class Critic:
 
 
 class MLP(nn.Module):
-    def __init__(self, shape, actionvation_fn, input_size, output_size):
+    def __init__(self, shape, activation_fn, input_size, output_size):
         super(MLP, self).__init__()
-        self.activation_fn = actionvation_fn
+        self.activation_fn = activation_fn
 
         modules = [nn.Linear(input_size, shape[0]), self.activation_fn()]
         scale = [np.sqrt(2)]
