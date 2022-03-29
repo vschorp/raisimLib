@@ -19,6 +19,7 @@ namespace rw_omav_controllers {
 
     ImpedanceControlModule::ImpedanceControlModule(const Yaml::Node& cfg) {
       setControllerParameters(cfg);
+      T_T_B_ = Eigen::Affine3d::Identity();
     }
 
 
@@ -41,8 +42,9 @@ namespace rw_omav_controllers {
 //      std::cout << "lin vel error B: " << velocity_error_B.norm() << std::endl;
 //      std::cout << "rate error error B: " << rate_error_B.norm() << std::endl;
 
-      Eigen::Vector3d tool_position_error_B, tool_velocity_error_B;
-      computeToolError(&tool_position_error_B, &tool_velocity_error_B);
+        // unused tool_error variables
+//      Eigen::Vector3d tool_position_error_B, tool_velocity_error_B;
+//      computeToolError(&tool_position_error_B, &tool_velocity_error_B);
 
       // Update all integrators.
       updateIntegrators(R_W_B * position_error_B, attitude_error_B, sampling_time);
@@ -169,7 +171,7 @@ namespace rw_omav_controllers {
 //      std::cout << cfg["use_ext_wrench"].template As<int>() << std::endl;
 //      std::cout << cfg["x_gain"].template As<float>() << std::endl;
 //      std::cout << cfg["use_force_control"].template As<bool>() << std::endl;
-      control_params_.use_ext_wrench = cfg["use_external_wrench"].template As<int>();
+      control_params_.use_ext_wrench = int(cfg["use_external_wrench"].template As<float>());
 
       // translational controller gains
       Eigen::Vector3d linear_axis_gains(cfg["x_gain"].template As<float>(), cfg["y_gain"].template As<float>(),
@@ -218,9 +220,9 @@ namespace rw_omav_controllers {
       mass_ = cfg["vehicle_params"]["mass"].template As<float>();
       gravity_ = cfg["vehicle_params"]["gravity"].template As<float>();
       com_offset_ = Eigen::Vector3d(
-              cfg["vehicle_params"]["com_offst"]["x"].template As<float>(),
-              cfg["vehicle_params"]["com_offst"]["y"].template As<float>(),
-              cfg["vehicle_params"]["com_offst"]["z"].template As<float>());
+              cfg["vehicle_params"]["com_offset"]["x"].template As<float>(),
+              cfg["vehicle_params"]["com_offset"]["y"].template As<float>(),
+              cfg["vehicle_params"]["com_offset"]["z"].template As<float>());
       inertia_ << cfg["vehicle_params"]["inertia"]["xx"].template As<float>(), cfg["vehicle_params"]["inertia"]["xy"].template As<float>(), cfg["vehicle_params"]["inertia"]["xz"].template As<float>(),
                   cfg["vehicle_params"]["inertia"]["xy"].template As<float>(), cfg["vehicle_params"]["inertia"]["yy"].template As<float>(), cfg["vehicle_params"]["inertia"]["yz"].template As<float>(),
                   cfg["vehicle_params"]["inertia"]["xz"].template As<float>(), cfg["vehicle_params"]["inertia"]["yz"].template As<float>(), cfg["vehicle_params"]["inertia"]["zz"].template As<float>();

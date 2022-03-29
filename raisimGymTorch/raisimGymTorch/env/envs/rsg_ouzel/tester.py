@@ -1,5 +1,5 @@
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymTorch.env.bin import rsg_anymal
+from raisimGymTorch.env.bin import rsg_ouzel
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymTorch.algo.ppo.module as ppo_module
 import os
@@ -11,7 +11,7 @@ import argparse
 
 # configuration
 parser = argparse.ArgumentParser()
-parser.add_argument('-w', '--weight', help='trained weight path', type=str, default='')
+parser.add_argument('-w', '--weight', help='trained weight path', type=str, default='/home/vincent/rl_4_aerial_manipulator/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_only_planning/2022-03-28-18-42-37/full_165000.pt')
 args = parser.parse_args()
 
 # directories
@@ -24,7 +24,7 @@ cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 # create environment from the configuration file
 cfg['environment']['num_envs'] = 1
 
-env = VecEnv(rsg_anymal.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
+env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
 
 # shortcuts
 ob_dim = env.num_obs
