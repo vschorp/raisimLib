@@ -130,7 +130,7 @@ namespace rw_omav_controllers {
                      const Eigen::Vector3d& _velocity_body,
                      const Eigen::Vector3d& _angular_velocity);
 
-        void setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Vector3d& _orientation_vec_1, const Eigen::Vector3d& _orientation_vec_2);
+        void setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Matrix3d& _orientation_corr_mat);
         void setRef(const Eigen::Vector3d& _position, const Eigen::Quaterniond& _orientation);
 
     private:

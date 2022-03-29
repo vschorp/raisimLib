@@ -93,9 +93,13 @@ class ENVIRONMENT : public RaisimGymEnv {
   float step(const Eigen::Ref<EigenVec>& action) final {
     // give adapted waypoint to controller -> get wrench
 //    std::cout << "action: " << action << std::endl;
-    auto actionD = action.cast<double>();
     controller_.setOdom(obDouble_.segment(0, 3), obDouble_.segment(3, 9), obDouble_.segment(12, 3), obDouble_.segment(15, 3));
-    controller_.setRefFromAction(actionD.segment(0, 3), actionD.segment(3, 3), actionD.segment(6, 3));
+
+    auto actionD = action.cast<double>();
+    Eigen::Vector3d ref_position_corr_vec = actionD.segment(0, 3);
+    Eigen::Matrix3d ref_orientation_corr_mat = RotationMatrixFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
+    controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr_mat);
+
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
 //    std::cout << "commanded thrust:\n" << wrench_command.thrust << "commanded torque:\n" << wrench_command.torque << std::endl;
@@ -118,8 +122,11 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     double waypoint_dist, error_angle;
     computeErrorMetrics(waypoint_dist, error_angle);
+    Eigen::AngleAxisd ref_orientation_corr_angle_axis(ref_orientation_corr_mat);
     rewards_.record("waypointDist", waypoint_dist);
     rewards_.record("orientError", error_angle);
+    rewards_.record("linearRefCorr", ref_position_corr_vec.squaredNorm());
+    rewards_.record("orientRefCorr", ref_orientation_corr_angle_axis.angle());
 //    rewards_.record("angularVel", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("force", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("torque", anymal_->getGeneralizedForce().squaredNorm());
@@ -180,23 +187,29 @@ class ENVIRONMENT : public RaisimGymEnv {
 
  private:
   void resetInitialConditions() {
+    Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     init_orientation.normalize();
-    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
-    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
-    gc_init_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), // position
+//    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
+//    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
+    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd::Identity());
+    gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
             init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     // reset reference
-    ref_position_ << unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_);
+    Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    ref_delta_position.normalize();
+    ref_position_ = init_position + 0.3 * ref_delta_position;
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_orientation.normalize();
-    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 20.0 / 180.0 * M_PI;
+    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 10.0 / 180.0 * M_PI;
 //    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
 //    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
-    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
+//    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
+    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd::Identity());
     Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
 
     ref_orientation_ = ref_quaternion.toRotationMatrix();
@@ -212,6 +225,22 @@ class ENVIRONMENT : public RaisimGymEnv {
     Eigen::AngleAxisd error_angle_axis(error_quat);
     errorAngle = error_angle_axis.angle();
   }
+
+  Eigen::Matrix3d RotationMatrixFromTwoVectors(Eigen::Vector3d _orientation_vec_1, Eigen::Vector3d _orientation_vec_2) {
+    Eigen::Matrix3d orientation_mat;
+    orientation_mat.setIdentity();
+    if (_orientation_vec_1.norm() > 0 && _orientation_vec_2.norm() > 0 && _orientation_vec_1.cross(_orientation_vec_2).norm() > 0) {
+      // Gram-Schmidt
+      Eigen::Vector3d e1 = _orientation_vec_1 / _orientation_vec_1.norm();
+      Eigen::Vector3d u2 = _orientation_vec_2 - e1.dot(_orientation_vec_2) * e1;
+      Eigen::Vector3d e2 = u2 / u2.norm();
+      orientation_mat.col(0) = e1;
+      orientation_mat.col(1) = e2;
+      orientation_mat.col(2) = e1.cross(e2);
+    }
+    return orientation_mat;
+  }
+
 
   int gcDim_, gvDim_, nJoints_;
   bool visualizable_ = false;

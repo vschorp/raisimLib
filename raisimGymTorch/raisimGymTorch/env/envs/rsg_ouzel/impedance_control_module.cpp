@@ -475,42 +475,26 @@ namespace rw_omav_controllers {
       odom_.angular_velocity_B = _angular_velocity;
     }
 
-    void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Vector3d& _orientation_vec_1, const Eigen::Vector3d& _orientation_vec_2) {
+    void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Matrix3d& _orientation_corr_mat) {
+      ref_.position_W = ref_position_;
       if (_position_corr.norm() > 0) {
-        Eigen::Vector3d position_corr_scaled = _position_corr / _position_corr.norm() * std::tanh(_position_corr.norm());
-        ref_.position_W = ref_position_ + position_corr_scaled;
-      } else {
-        ref_.position_W = ref_position_;
+//        Eigen::Vector3d position_corr_scaled = _position_corr / _position_corr.norm() * std::tanh(_position_corr.norm());
+//        ref_.position_W = ref_position_ + position_corr_scaled;
+        ref_.position_W += _position_corr;
       }
       if (!Eigen::isfinite(ref_.position_W.array()).any()) {
         std::cout << "ref position is nan!!" << std::endl;
       }
 
-      if (_orientation_vec_1.norm() > 0 && _orientation_vec_2.norm() > 0 && _orientation_vec_1.cross(_orientation_vec_2).norm() > 0) {
-        // Gram-Schmidt
-        Eigen::Vector3d e1 = _orientation_vec_1 / _orientation_vec_1.norm();
-        Eigen::Vector3d u2 = _orientation_vec_2 - e1.dot(_orientation_vec_2) * e1;
-        Eigen::Vector3d e2 = u2 / u2.norm();
-        Eigen::Matrix3d orientation_mat;
-        orientation_mat.col(0) = e1;
-        orientation_mat.col(1) = e2;
-        orientation_mat.col(2) = e1.cross(e2);
-
-        Eigen::AngleAxisd corr_angle_axis(orientation_mat);
-        double angle_scaled = std::tanh(corr_angle_axis.angle()) * 5.0 / 180.0 * M_PI ; // Tuned
-        Eigen::AngleAxisd corr_angle_axis_scaled(angle_scaled, corr_angle_axis.axis());
-        Eigen::Quaterniond corr_quaternion_scaled(corr_angle_axis_scaled);
-
-        ref_.orientation_W_B = ref_quaternion_ * corr_quaternion_scaled;
-//        if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).all()) {
-//          std::cout << "ref orientation wb: " << ref_.orientation_W_B.coeffs()<< std::endl;
-//          std::cout << "ref quaternion: " << ref_quaternion_.coeffs() << std::endl;
-//          std::cout << "corr quaternion" << corr_quaternion_scaled.coeffs() << std::endl;
-//        }
-//        ref_.orientation_W_B.w() = ref_quaternion_.w() + corr_quaternion.w();
-//        ref_.orientation_W_B.vec() = ref_quaternion_.vec() + corr_quaternion.vec();
-      } else {
-        ref_.orientation_W_B = ref_quaternion_;
+      ref_.orientation_W_B = ref_quaternion_;
+      if (!_orientation_corr_mat.isIdentity()) {
+//        Eigen::AngleAxisd corr_angle_axis(_orientation_corr_mat);
+//        double angle_scaled = std::tanh(corr_angle_axis.angle()) * 5.0 / 180.0 * M_PI; // Tuned
+//        Eigen::AngleAxisd corr_angle_axis_scaled(angle_scaled, corr_angle_axis.axis());
+//        Eigen::Quaterniond corr_quaternion_scaled(corr_angle_axis_scaled);
+//        ref_.orientation_W_B = ref_quaternion_ * corr_quaternion_scaled;
+        Eigen::Quaterniond orientation_corr_quat(_orientation_corr_mat);
+        ref_.orientation_W_B *= orientation_corr_quat;
       }
       if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
         std::cout << "ref orientation is nan!!" << std::endl;
