@@ -2,16 +2,18 @@ from ruamel.yaml import YAML, dump, RoundTripDumper
 from raisimGymTorch.env.bin import rsg_ouzel
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymTorch.algo.ppo.module as ppo_module
+from raisimGymTorch.helper.output_helper import parse_obs, parse_action, visualize
 import os
 import math
 import time
 import torch
 import argparse
+import numpy as np
 
 
 # configuration
 parser = argparse.ArgumentParser()
-parser.add_argument('-w', '--weight', help='trained weight path', type=str, default='/home/vincent/rl_4_aerial_manipulator/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_only_planning/2022-03-28-18-42-37/full_165000.pt')
+parser.add_argument('-w', '--weight', help='trained weight path', type=str, default='')
 args = parser.parse_args()
 
 # directories
@@ -57,12 +59,24 @@ else:
     # max_steps = 1000000
     max_steps = 1000 ## 10 secs
 
+    body_pos_W_all = np.zeros([max_steps, 3])
+    body_orient_quat_W_all = np.zeros([max_steps, 4])
+    body_linear_vel_W_all = np.zeros([max_steps, 3])
+    body_angular_vel_W_all = np.zeros([max_steps, 3])
+    ref_pos_W_all = np.zeros([max_steps, 3])
+    ref_orient_quat_W_all = np.zeros([max_steps, 4])
+
+    action_lin_corr_all = np.zeros([max_steps, 3])
+    action_orient_corr_all = np.zeros([max_steps, 4])
+
     for step in range(max_steps):
         time.sleep(0.01)
         obs = env.observe(False)
         action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
         reward_ll_sum = reward_ll_sum + reward_ll[0]
+        parse_obs(obs, step, body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all, ref_orient_quat_W_all)
+        parse_action(action_ll, step, action_lin_corr_all, action_orient_corr_all)
         if dones or step == max_steps - 1:
             print('----------------------------------------------------')
             print('{:<40} {:>6}'.format("average ll reward: ", '{:0.10f}'.format(reward_ll_sum / (step + 1 - start_step_id))))
@@ -71,6 +85,8 @@ else:
             start_step_id = step + 1
             reward_ll_sum = 0.0
 
+
     env.turn_off_visualization()
     env.reset()
+    visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all, ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all)
     print("Finished at the maximum visualization steps")
