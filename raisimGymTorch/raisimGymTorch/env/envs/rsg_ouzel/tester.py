@@ -50,7 +50,7 @@ else:
     start_step_id = 0
 
     print("Visualizing and evaluating the policy: ", weight_path)
-    loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], torch.nn.LeakyReLU, ob_dim, act_dim)
+    loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], torch.nn.Tanh, ob_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)['actor_architecture_state_dict'])
 
     env.load_scaling(weight_dir, int(iteration_number))
@@ -88,5 +88,6 @@ else:
 
     env.turn_off_visualization()
     env.reset()
-    visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all, ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all)
+    visualize(task_path, body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all,
+              ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all)
     print("Finished at the maximum visualization steps")

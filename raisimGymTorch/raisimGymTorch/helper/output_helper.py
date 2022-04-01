@@ -44,7 +44,8 @@ def parse_action(action_ll: torch.Tensor, step, action_lin_corr_all, action_orie
     action_orient_corr_all[step, :] = action_orient_corr_mat.as_quat()
 
 
-def visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all, ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all):
+def visualize(task_path, body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all, ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all):
+    save_path = task_path + "/../../../../data/images/"
     plt.figure(figsize=[20, 10])
     plt.plot(body_pos_W_all[:, 0], 'r-', label='body_pos_W_all_x')
     plt.plot(body_pos_W_all[:, 1], 'g-',label='body_pos_W_all_y')
@@ -56,7 +57,7 @@ def visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, bod
     plt.plot(action_lin_corr_all[:, 1] + ref_pos_W_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
     plt.plot(action_lin_corr_all[:, 2] + ref_pos_W_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
     plt.legend()
-    plt.savefig("../../../../data/images/pos.png")
+    plt.savefig(save_path + "pos.png")
 
     plt.figure(figsize=[20, 10])
     plt.plot(body_orient_quat_W_all[:, 0], 'r-', label='body_orient_quat_W_all_x')
@@ -72,7 +73,7 @@ def visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, bod
     plt.plot(action_orient_corr_all[:, 2] + ref_orient_quat_W_all[:, 2], 'b*', label='ref_orient_corr_quat_W_all_z')
     plt.plot(action_orient_corr_all[:, 3] + ref_orient_quat_W_all[:, 3], 'm*', label='ref_orient_corr_quat_W_all_w')
     plt.legend()
-    plt.savefig("../../../../data/images/orient.png")
+    plt.savefig(save_path + "orient.png")
 
     plt.figure(figsize=[20, 10])
     plt.plot(body_linear_vel_W_all[:, 0], 'r-', label='body_linear_vel_W_all_x')
@@ -80,7 +81,7 @@ def visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, bod
     plt.plot(body_linear_vel_W_all[:, 2], 'b-', label='body_linear_vel_W_all_z')
     plt.plot(np.linalg.norm(body_linear_vel_W_all, axis=1), 'm--', label='body_linear_vel_W_all_norm')
     plt.legend()
-    plt.savefig("../../../../data/images/linear_vel.png")
+    plt.savefig(save_path + "linear_vel.png")
 
     plt.figure(figsize=[20, 10])
     plt.plot(body_angular_vel_W_all[:, 0], 'r-', label='body_angular_vel_W_all_x')
@@ -88,4 +89,4 @@ def visualize(body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, bod
     plt.plot(body_angular_vel_W_all[:, 2], 'b-', label='body_angular_vel_W_all_z')
     plt.plot(np.linalg.norm(body_angular_vel_W_all, axis=1), 'm--', label='body_angular_vel_W_all_norm')
     plt.legend()
-    plt.savefig("../../../../data/images/angular_vel.png")
+    plt.savefig(save_path + "angular_vel.png")
