@@ -95,12 +95,12 @@ def visualize(task_path, body_pos_W_all, body_orient_quat_W_all, body_linear_vel
     plt.plot(np.linalg.norm(body_pos_W_all - ref_pos_W_all, axis=1), 'r-', label='pos_W_error')
     #TODO: fix angle error plot
 
-    # body_orient_W_all = Rotation.from_quat(body_orient_quat_W_all)
-    # ref_orient_W_all = Rotation.from_quat(ref_orient_quat_W_all)
-    # diff_orient_W_all = body_orient_W_all.inv() * ref_orient_W_all
-    # diff_angles_W_all = diff_orient_W_all.magnitude()
-    # diff_angles_W_all_scaled = np.where(np.abs(diff_angles_W_all) < np.abs(diff_angles_W_all - np.pi), diff_angles_W_all, diff_angles_W_all - np.pi)
-    # plt.plot(diff_angles_W_all_scaled / np.pi * 180.0, 'b-', label='angle_error_deg')
+    body_orient_W_all = Rotation.from_quat(body_orient_quat_W_all)
+    ref_orient_W_all = Rotation.from_quat(ref_orient_quat_W_all)
+    diff_orient_W_all = body_orient_W_all.inv() * ref_orient_W_all
+    diff_angles_W_all = diff_orient_W_all.magnitude()
+    diff_angles_W_all_scaled = np.where(np.abs(diff_angles_W_all) < np.abs(diff_angles_W_all - np.pi), diff_angles_W_all, diff_angles_W_all - np.pi)
+    plt.plot(diff_angles_W_all_scaled / np.pi * 180.0, 'b-', label='angle_error_deg')
 
     plt.legend()
     plt.savefig(save_path + "error_metrics.png")

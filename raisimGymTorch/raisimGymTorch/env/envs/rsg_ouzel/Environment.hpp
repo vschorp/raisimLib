@@ -193,6 +193,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     init_orientation.normalize();
     double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
     Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
+    init_quaternion.normalize();
     gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
             init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
@@ -208,7 +209,9 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
 //    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
     Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
+    ref_delta_quaternion.normalize();
     Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
+    ref_quaternion.normalize();
 
     ref_orientation_ = ref_quaternion.toRotationMatrix();
     controller_.setRef(ref_position_, ref_quaternion);
