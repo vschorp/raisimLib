@@ -185,6 +185,10 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void curriculumUpdate() { };
 
+  void setSeed(int seed) {
+    gen_.seed(seed);
+  }
+
  private:
   void resetInitialConditions() {
     Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));

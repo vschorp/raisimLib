@@ -27,6 +27,12 @@ cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 cfg['environment']['num_envs'] = 1
 
 env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
+seed = int(time.time())
+print(f"the seed is {seed}")
+env.seed(seed)
+
+visualize_simulation = True
+# visualize_simulation = False
 
 # shortcuts
 ob_dim = env.num_obs
@@ -35,6 +41,12 @@ act_dim = env.num_acts
 weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
 weight_dir = weight_path.rsplit('/', 1)[0] + '/'
+
+activation = None
+if cfg["activation"] == "tanh":
+    activation = torch.nn.Tanh
+else:
+    print("Error ! No valid activation given in cfg file")
 
 if weight_path == "":
     print("Can't find trained weight, please provide a trained weight with --weight switch\n")
@@ -50,7 +62,7 @@ else:
     start_step_id = 0
 
     print("Visualizing and evaluating the policy: ", weight_path)
-    loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], torch.nn.Tanh, ob_dim, act_dim)
+    loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)['actor_architecture_state_dict'])
 
     env.load_scaling(weight_dir, int(iteration_number))
@@ -70,7 +82,8 @@ else:
     action_orient_corr_all = np.zeros([max_steps, 4])
 
     for step in range(max_steps):
-        time.sleep(0.01)
+        if visualize_simulation:
+            time.sleep(0.01)
         obs = env.observe(False)
         action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         reward_ll, dones = env.step(action_ll.cpu().detach().numpy())

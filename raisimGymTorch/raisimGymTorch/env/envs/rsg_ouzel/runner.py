@@ -50,14 +50,20 @@ total_steps = n_steps * env.num_envs
 
 avg_rewards = []
 
-actor = ppo_module.Actor(ppo_module.MLP(cfg['architecture']['policy_net'], nn.Tanh, ob_dim, act_dim),
+activation = None
+if cfg["activation"] == "tanh":
+    activation = nn.Tanh
+else:
+    print("Error ! No valid activation given in cfg file")
+
+actor = ppo_module.Actor(ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim),
                          ppo_module.MultivariateGaussianDiagonalCovariance(act_dim,
                                                                            env.num_envs,
                                                                            1.0,
                                                                            NormalSampler(act_dim),
                                                                            cfg['seed']),
                          device)
-critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], nn.Tanh, ob_dim, 1),
+critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], activation, ob_dim, 1),
                            device)
 
 saver = ConfigurationSaver(log_dir=home_path + "/raisimGymTorch/data/"+task_name,
@@ -98,7 +104,7 @@ for update in range(1000000):
             'optimizer_state_dict': ppo.optimizer.state_dict(),
         }, saver.data_dir+"/full_"+str(update)+'.pt')
         # we create another graph just to demonstrate the save/load method
-        loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], nn.LeakyReLU, ob_dim, act_dim)
+        loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim)
         loaded_graph.load_state_dict(torch.load(saver.data_dir+"/full_"+str(update)+'.pt')['actor_architecture_state_dict'])
 
         env.turn_on_visualization()
@@ -113,7 +119,7 @@ for update in range(1000000):
                 frame_end = time.time()
                 wait_time = cfg['environment']['control_dt'] - (frame_end-frame_start)
                 if wait_time > 0.:
-                    time.sleep(wait_time) #TODO: is that needed ?
+                    time.sleep(wait_time)
 
         env.stop_video_recording()
         env.turn_off_visualization()
