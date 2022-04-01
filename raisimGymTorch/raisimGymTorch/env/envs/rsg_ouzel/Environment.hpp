@@ -191,9 +191,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     init_orientation.normalize();
-//    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
-//    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
-    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd::Identity());
+    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
+    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
     gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
             init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
@@ -208,8 +207,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 10.0 / 180.0 * M_PI;
 //    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
 //    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
-//    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
-    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd::Identity());
+    Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
     Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
 
     ref_orientation_ = ref_quaternion.toRotationMatrix();

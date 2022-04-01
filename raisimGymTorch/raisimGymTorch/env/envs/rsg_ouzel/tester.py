@@ -1,3 +1,4 @@
+import numpy as np
 from ruamel.yaml import YAML, dump, RoundTripDumper
 from raisimGymTorch.env.bin import rsg_ouzel
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
@@ -35,6 +36,13 @@ act_dim = env.num_acts
 weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
 weight_dir = weight_path.rsplit('/', 1)[0] + '/'
+
+body_pos_W_all = np.empty([1, 30])
+body_orient_mat_W_all = np.empty([1, 30])
+body_linear_vel_W_all = np.empty([1, 30])
+body_angular_vel_W_all = np.empty([1, 30])
+ref_pos_W_all = np.empty([1, 30])
+ref_orient_mat_W_all = np.empty([1, 30])
 
 if weight_path == "":
     print("Can't find trained weight, please provide a trained weight with --weight switch\n")
@@ -91,3 +99,17 @@ else:
     visualize(task_path, body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all,
               ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all)
     print("Finished at the maximum visualization steps")
+
+def parse_obs(obs: np.ndarray, body_pos_W_all, body_orient_mat_W_all, body_linear_vel_W_all, _angular_vel_W_all, pos_W_all, orient_mat_W_all):
+    body_pos_W = obs[0][0:3]
+    body_orient_mat_W = np.concatenate(obs[0][3:6], obs[0][6:9], obs[0][9:12])
+    body_linear_vel_W = obs[0][12:15]
+    body_angular_vel_W = obs[0][15:18]
+    ref_pos_W = obs[0][18:21]
+    ref_orient_mat_W = np.concatenate(obs[0][21:24], obs[0][24:27], obs[0][27:30])
+
+    body_orient_mat_W_all.append(body_orient_mat_W)
+    body_linear_vel_W_all.append(body_linear_vel_W)
+    body_angular_vel_W_all.append(body_angular_vel_W)
+    ref_pos_W_all.append(ref_pos_W)
+    ref_orient_mat_W_all.append(ref_orient_mat_W)
