@@ -205,11 +205,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     // reset reference
     Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_position.normalize();
-    ref_position_ = init_position + 0.3 * ref_delta_position;
+    ref_position_ = init_position + 0.6 * unifDistPlusMinusOne_(gen_) * ref_delta_position;
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_orientation.normalize();
-    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 10.0 / 180.0 * M_PI;
+    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 20.0 / 180.0 * M_PI;
 //    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
 //    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
     Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
