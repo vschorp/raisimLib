@@ -26,7 +26,7 @@ cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 # create environment from the configuration file
 cfg['environment']['num_envs'] = 1
 
-env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
+env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'], normalize_ob=False)
 seed = int(time.time())
 print(f"the seed is {seed}")
 env.seed(seed)
@@ -65,7 +65,7 @@ else:
     loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)['actor_architecture_state_dict'])
 
-    env.load_scaling(weight_dir, int(iteration_number))
+    # env.load_scaling(weight_dir, int(iteration_number))
     env.turn_on_visualization()
 
     # max_steps = 1000000
