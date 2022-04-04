@@ -1,0 +1,24 @@
+#!/bin/bash   
+#BSUB -J "raisim-gym"           #Name of the job                                             
+#BSUB -n 16                     #Requesting 16 core                              
+#BSUB -W 8:00                   #Requesting 8 hours running time                
+
+#source terminal
+source /cluster/home/vschorp/.bashrc
+
+#Change to the old software stack
+source /cluster/apps/local/env2lmod.sh
+
+#Load the needed modules
+module load gcc/6.3.0 cmake/3.16.5 eigen boost
+
+#activate conda env
+conda activate raisim-gym
+
+#rebuild env
+rm -rf /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/build
+python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/setup.py develop              
+
+#run training script
+python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/raisimGymTorch/env/envs/rsg_ouzel/runner.py
+
