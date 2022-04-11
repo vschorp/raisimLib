@@ -2,7 +2,7 @@ from ruamel.yaml import YAML, dump, RoundTripDumper
 from raisimGymTorch.env.bin import rsg_ouzel
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymTorch.algo.ppo.module as ppo_module
-from raisimGymTorch.helper.output_helper import parse_obs, parse_action, visualize
+from raisimGymTorch.helper.output_helper import EvaluationVisualizer
 import os
 import math
 import time
@@ -26,7 +26,8 @@ cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 # create environment from the configuration file
 cfg['environment']['num_envs'] = 1
 
-env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'], normalize_ob=False)
+env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper))) # cfg['environment']
+# env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), normalize_ob=False) # cfg['environment']
 seed = int(time.time())
 print(f"the seed is {seed}")
 env.seed(seed)
@@ -71,15 +72,8 @@ else:
     # max_steps = 1000000
     max_steps = 1000 ## 10 secs
 
-    body_pos_W_all = np.zeros([max_steps, 3])
-    body_orient_quat_W_all = np.zeros([max_steps, 4])
-    body_linear_vel_W_all = np.zeros([max_steps, 3])
-    body_angular_vel_W_all = np.zeros([max_steps, 3])
-    ref_pos_W_all = np.zeros([max_steps, 3])
-    ref_orient_quat_W_all = np.zeros([max_steps, 4])
-
-    action_lin_corr_all = np.zeros([max_steps, 3])
-    action_orient_corr_all = np.zeros([max_steps, 4])
+    eval_visualizer = EvaluationVisualizer(max_steps, ob_dim, task_path)
+    # eval_visualizer.load_normalization_params(weight_dir, iteration_number)
 
     for step in range(max_steps):
         if visualize_simulation:
@@ -88,8 +82,8 @@ else:
         action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
         reward_ll_sum = reward_ll_sum + reward_ll[0]
-        parse_obs(obs, step, body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all, ref_orient_quat_W_all)
-        parse_action(action_ll, step, action_lin_corr_all, action_orient_corr_all)
+        eval_visualizer.parse_obs(obs, step)
+        eval_visualizer.parse_action(action_ll, step)
         if dones or step == max_steps - 1:
             print('----------------------------------------------------')
             print('{:<40} {:>6}'.format("average ll reward: ", '{:0.10f}'.format(reward_ll_sum / (step + 1 - start_step_id))))
@@ -101,6 +95,5 @@ else:
 
     env.turn_off_visualization()
     env.reset()
-    visualize(task_path, body_pos_W_all, body_orient_quat_W_all, body_linear_vel_W_all, body_angular_vel_W_all, ref_pos_W_all,
-              ref_orient_quat_W_all, action_lin_corr_all, action_orient_corr_all)
+    eval_visualizer.visualize()
     print("Finished at the maximum visualization steps")
