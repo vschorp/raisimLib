@@ -30,7 +30,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    myfile.open (ros::package::getPath("ros_raisim_interface") + "/resource/temp.urdf", std::ios::out);
 //    myfile << *urdf_;
 //    myfile.close();
-    ouzel_ = world_->addArticulatedSystem(resourceDir_ + "/ouzel/temp.urdf");
+    ouzel_ = world_->addArticulatedSystem(resourceDir_ + "/ouzel_delta/temp.urdf");
 
 //    std::string baseLink = ouzel_->getBodyIdx("ouzel/base_link");
 //    ouzel_ = world_->addArticulatedSystem(resourceDir_+"/ouzel/urdf/model.urdf"); //used to be anymal.urdf
