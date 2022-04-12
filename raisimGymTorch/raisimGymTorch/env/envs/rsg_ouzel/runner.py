@@ -82,7 +82,7 @@ ppo = PPO.PPO(actor=actor,
               log_dir=saver.data_dir,
               shuffle_batch=False,
               learning_rate_schedule='constant',
-              learning_rate=5e-4
+              learning_rate=5e-3
               )
 
 if mode == 'retrain':
