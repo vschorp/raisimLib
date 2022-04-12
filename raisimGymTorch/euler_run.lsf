@@ -1,6 +1,6 @@
 #!/bin/bash   
 #BSUB -J "raisim-gym"           #Name of the job                                             
-#BSUB -n 16                     #Requesting 16 core                              
+#BSUB -n 32                     #Requesting 32 core
 #BSUB -W 8:00                   #Requesting 8 hours running time                
 
 #source terminal
