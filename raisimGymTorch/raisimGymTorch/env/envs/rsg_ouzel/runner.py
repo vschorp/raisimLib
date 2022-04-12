@@ -37,7 +37,7 @@ home_path = task_path + "/../../../../.."
 cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 
 # create environment from the configuration file
-env = VecEnv(RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), normalize_ob=False)
+env = VecEnv(RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), normalize_ob=True)
 
 # shortcuts
 ob_dim = env.num_obs
