@@ -34,7 +34,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
 //    std::string baseLink = ouzel_->getBodyIdx("ouzel/base_link");
 //    ouzel_ = world_->addArticulatedSystem(resourceDir_+"/ouzel/urdf/model.urdf"); //used to be anymal.urdf
-    ouzel_->setName("ouzel");
+    ouzel_->setName("ouzel_delta");
     ouzel_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     world_->addGround(-10.0); // we don't need a ground for the drone
 
@@ -42,6 +42,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     gcDim_ = ouzel_->getGeneralizedCoordinateDim();
     gvDim_ = ouzel_->getDOF();
     nJoints_ = gvDim_ - 6;
+    std::cout << "gcDim_ " << gcDim_ << std::endl;
+    std::cout << "gvDim_ " << gvDim_ << std::endl;
 
     /// initialize containers
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
