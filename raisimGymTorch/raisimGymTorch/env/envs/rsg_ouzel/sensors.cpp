@@ -16,7 +16,7 @@ namespace raisim_sensors {
     robot_->getVelocity(baseLink_, imu_wrt_link_offset_ , imu_linear_velocity_W);
     robot_->getBaseOrientation(robot_orientation_rotmat);
 
-    measureGT_ = robot_orientation_rotmat.e().transpose()*((imu_linear_velocity_W.e() - prev_imu_linear_velocity_W_.e())/sampleTime_ - world_->getGravity().e());
+    measureGT_ = robot_orientation_rotmat.e().transpose()*((imu_linear_velocity_W.e() - prev_imu_linear_velocity_W_.e())/sampleTime_ - gravity_);
 
     prev_robot_linear_velocity_W_ = robot_linear_velocity_W;
     prev_imu_linear_velocity_W_ = imu_linear_velocity_W;

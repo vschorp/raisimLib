@@ -331,6 +331,7 @@ namespace raisim_sensors {
         measure_.setZero();
         measureGT_.setZero();
       };
+      imu() : sensor (0.0, NULL) { }
     
       /// \brief update sensor value.
       void update();
@@ -466,6 +467,8 @@ namespace raisim_sensors {
         measure_.setZero();
         measureGT_.setZero();
       };
+
+      odometry() : sensor(0.0, NULL) { }
     
       /// \brief update sensor value.
       void update();
