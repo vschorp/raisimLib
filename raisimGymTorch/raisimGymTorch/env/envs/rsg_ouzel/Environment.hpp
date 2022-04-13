@@ -188,16 +188,12 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    Eigen::Quaternionf quat(obFloat.segment(3, 4));
 //    Eigen::Matrix3f rot_mat = quat.toRotationMatrix();
 //    ob << ob.segment(0, 3), rot_mat.col(0), rot_mat.col(1), rot_mat.col(2), obFloat.segment(7, 6);
-    std::cout << "in ob! " << std::endl;
     Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
-    std::cout << "orientation_W_B_mat: " << orientation_W_B_mat << std::endl;
     Eigen::VectorXd ob_double(obDim_);
     ob_double << position_W_, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
                  bodyLinearVel_, bodyAngularVel_,
                  ref_position_, ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2);
-    std::cout << "ob_double: " << ob_double << std::endl;
     ob = ob_double.cast<float>();
-    std::cout << "ob: " << ob << std::endl;
   }
 
   bool isTerminalState(float& terminalReward) final {
