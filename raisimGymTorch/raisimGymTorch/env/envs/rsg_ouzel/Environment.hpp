@@ -56,7 +56,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     obDim_ = 30;
     actionDim_ =  9;
     actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
-    obDouble_.setZero(obDim_);
+//    obDouble_.setZero(obDim_);
+    position_W_.setZero();
+    orientation_W_B_.setIdentity();
+    bodyLinearVel_.setZero();
+    bodyAngularVel_.setZero();
 
     /// action scaling
     actionMean_ = gc_init_.tail(actionDim_);
@@ -99,12 +103,14 @@ class ENVIRONMENT : public RaisimGymEnv {
   float step(const Eigen::Ref<EigenVec>& action) final {
     // give adapted waypoint to controller -> get wrench
 //    std::cout << "action: " << action << std::endl;
-    controller_.setOdom(obDouble_.segment(0, 3), obDouble_.segment(3, 9), obDouble_.segment(12, 3), obDouble_.segment(15, 3));
+    controller_.setOdom(position_W_, orientation_W_B_, bodyLinearVel_, bodyAngularVel_);
 
     auto actionD = action.cast<double>();
     Eigen::Vector3d ref_position_corr_vec = actionD.segment(0, 3);
-    Eigen::Matrix3d ref_orientation_corr_mat = RotationMatrixFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
-    controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr_mat);
+    Eigen::Quaterniond ref_orientation_corr = QuaternionFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
+    std::cout << "action ref pos: " << ref_position_corr_vec << std::endl;
+    std::cout << "action ref orient: " << ref_orientation_corr.coeffs() << std::endl;
+    controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr);
 
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
@@ -128,7 +134,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     double waypoint_dist, error_angle;
     computeErrorMetrics(waypoint_dist, error_angle);
-    Eigen::AngleAxisd ref_orientation_corr_angle_axis(ref_orientation_corr_mat);
+    Eigen::AngleAxisd ref_orientation_corr_angle_axis(ref_orientation_corr);
     rewards_.record("waypointDist", waypoint_dist);
     rewards_.record("orientError", error_angle);
     rewards_.record("linearRefCorr", ref_position_corr_vec.squaredNorm());
@@ -142,26 +148,34 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void updateObservation() {
     // TODO add observations from sensor
-    ouzel_->getState(gc_, gv_);
-    raisim::Vec<4> quat;
-    raisim::Mat<3,3> rot;
-    quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
-    raisim::quatToRotMat(quat, rot);
-    bodyLinearVel_ = rot.e().transpose() * gv_.segment(0, 3);
-    bodyAngularVel_ = rot.e().transpose() * gv_.segment(3, 3);
+    imu_.update();
+    odometry_.update();
+    Eigen::VectorXd odometry_measurement = odometry_.getMeasGT();
+    position_W_ = odometry_measurement.segment(0, 3);
+    orientation_W_B_ = Eigen::Quaterniond(odometry_measurement(3), odometry_measurement(4), odometry_measurement(5), odometry_measurement(6));
+    bodyLinearVel_ = odometry_measurement.segment(7, 3);
+    bodyAngularVel_ = odometry_measurement.segment(10, 3);
 
-    obDouble_ << gc_.segment(0,3), /// body position
-        rot.e().col(0), rot.e().col(1), rot.e().col(2), /// body orientation
-        bodyLinearVel_, bodyAngularVel_, /// body linear&angular velocity
-        ref_position_, /// ref position
-        ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2); /// ref orientation
+    ouzel_->getState(gc_, gv_);
+//    raisim::Vec<4> quat;
+//    raisim::Mat<3,3> rot;
+//    quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
+//    raisim::quatToRotMat(quat, rot);
+//    bodyLinearVel_ = rot.e().transpose() * gv_.segment(0, 3);
+//    bodyAngularVel_ = rot.e().transpose() * gv_.segment(3, 3);
+
+//    obDouble_ << gc_.segment(0,3), /// body position
+//        rot.e().col(0), rot.e().col(1), rot.e().col(2), /// body orientation
+//        bodyLinearVel_, bodyAngularVel_, /// body linear&angular velocity
+//        ref_position_, /// ref position
+//        ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2); /// ref orientation
 //    std::cout << "ob quat:\n" << quat << std::endl;
 //    std::cout << "observation:\n" << obDouble_ << std::endl;
 //    std::cout << "lin vel:\n" << bodyLinearVel_ << std::endl;
 //    std::cout << "ang vel:\n" << bodyAngularVel_ << std::endl;
     if (!Eigen::isfinite(gc_.array()).any()) {
       std::cout << "ob is nan!!" << std::endl;
-      std::cout << "ob : " << obDouble_ << std::endl;
+      std::cout << "odometry : " << odometry_measurement << std::endl;
       std::cout << "gc : " << gc_ << std::endl;
       std::cout << "gv : " << gv_ << std::endl;
       raise(SIGTERM);
@@ -173,8 +187,17 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    Eigen::VectorXf obFloat = obDouble_.cast<float>();
 //    Eigen::Quaternionf quat(obFloat.segment(3, 4));
 //    Eigen::Matrix3f rot_mat = quat.toRotationMatrix();
-//    ob << obFloat.segment(0, 3), rot_mat.col(0), rot_mat.col(1), rot_mat.col(2), obFloat.segment(7, 6);
-      ob = obDouble_.cast<float>();
+//    ob << ob.segment(0, 3), rot_mat.col(0), rot_mat.col(1), rot_mat.col(2), obFloat.segment(7, 6);
+    std::cout << "in ob! " << std::endl;
+    Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
+    std::cout << "orientation_W_B_mat: " << orientation_W_B_mat << std::endl;
+    Eigen::VectorXd ob_double(obDim_);
+    ob_double << position_W_, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
+                 bodyLinearVel_, bodyAngularVel_,
+                 ref_position_, ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2);
+    std::cout << "ob_double: " << ob_double << std::endl;
+    ob = ob_double.cast<float>();
+    std::cout << "ob: " << ob << std::endl;
   }
 
   bool isTerminalState(float& terminalReward) final {
@@ -229,15 +252,15 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void computeErrorMetrics(double& waypointDist, double& errorAngle) {
     // Maybe want to clamp the error terms?
-    waypointDist = (gc_.segment(0, 3) - ref_position_).squaredNorm();
+    waypointDist = (position_W_ - ref_position_).squaredNorm();
 
-    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
-    auto error_quat = Eigen::Quaterniond (ref_orientation_) * current_quat.inverse();
+//    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
+    auto error_quat = Eigen::Quaterniond (ref_orientation_) * orientation_W_B_.inverse();
     Eigen::AngleAxisd error_angle_axis(error_quat);
     errorAngle = error_angle_axis.angle();
   }
 
-  Eigen::Matrix3d RotationMatrixFromTwoVectors(Eigen::Vector3d _orientation_vec_1, Eigen::Vector3d _orientation_vec_2) {
+  Eigen::Quaterniond QuaternionFromTwoVectors(Eigen::Vector3d _orientation_vec_1, Eigen::Vector3d _orientation_vec_2) {
     Eigen::Matrix3d orientation_mat;
     orientation_mat.setIdentity();
     if (_orientation_vec_1.norm() > 0 && _orientation_vec_2.norm() > 0 && _orientation_vec_1.cross(_orientation_vec_2).norm() > 0) {
@@ -249,7 +272,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       orientation_mat.col(1) = e2;
       orientation_mat.col(2) = e1.cross(e2);
     }
-    return orientation_mat;
+    return Eigen::Quaterniond(orientation_mat);
   }
 
 
@@ -260,8 +283,10 @@ class ENVIRONMENT : public RaisimGymEnv {
   double terminalRewardCoeff_ = -10.;
   double terminalWaypointDist = 5.0;
   double terminalAngleError = 60.0 / 180.0 * M_PI;
-  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
-  Eigen::Vector3d bodyLinearVel_, bodyAngularVel_;
+  Eigen::VectorXd actionMean_, actionStd_;
+//  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
+  Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_;
+  Eigen::Quaterniond orientation_W_B_;
   std::set<size_t> footIndices_;
   double sampling_time_;
   Eigen::Vector3d ref_position_;
@@ -272,7 +297,6 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim_sensors::imu imu_;
   raisim_sensors::odometry odometry_;
 
-  /// these variables are not in use. They are placed to show you how to create a random number sampler.
   //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
   std::uniform_real_distribution<double> unifDistPlusMinusOne_;

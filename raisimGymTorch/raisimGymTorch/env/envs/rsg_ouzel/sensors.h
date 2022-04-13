@@ -113,7 +113,7 @@ namespace raisim_sensors {
     protected:
       double sampleTime_;
       T noise_;
-      thread_local static std::mt19937 randomGenerator_;
+      std::mt19937 randomGenerator_;
       std::normal_distribution<double> standardNormalDistribution_;
   };
 

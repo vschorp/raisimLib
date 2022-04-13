@@ -73,10 +73,10 @@ environment:
     gyroscopeTurnOnBiasSigma: 0.0087
     gyroscopeNoiseDensity: 0.00005366563
     gyroscopeRandomWalk: 0.000038785
-    linkName: base_link
+    linkName: ouzel/base_link
     robotNamespace: ouzel
   odometry:
-    linkName: base_link
+    linkName: ouzel/base_link
     childFrameId: ouzel
 
 architecture:

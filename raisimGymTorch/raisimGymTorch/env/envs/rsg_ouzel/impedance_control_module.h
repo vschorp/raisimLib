@@ -126,11 +126,11 @@ namespace rw_omav_controllers {
                 mav_msgs::EigenTorqueThrust* wrench_command, const double sampling_time);
 
         void setOdom(const Eigen::Vector3d& _position,
-                     const Eigen::VectorXd& _orientation,
+                     const Eigen::Quaterniond& _orientation,
                      const Eigen::Vector3d& _velocity_body,
                      const Eigen::Vector3d& _angular_velocity);
 
-        void setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Matrix3d& _orientation_corr_mat);
+        void setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Quaterniond& _orientation_corr_mat);
         void setRef(const Eigen::Vector3d& _position, const Eigen::Quaterniond& _orientation);
 
     private:
