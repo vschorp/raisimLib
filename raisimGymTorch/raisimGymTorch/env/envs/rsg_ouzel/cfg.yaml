@@ -75,7 +75,7 @@ environment:
     gyroscopeRandomWalk: 0.000038785
     linkName: base_link
     robotNamespace: ouzel
-  vicon:
+  odometry:
     linkName: base_link
     childFrameId: ouzel
 

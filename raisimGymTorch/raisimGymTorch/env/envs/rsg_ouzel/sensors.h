@@ -234,8 +234,8 @@ namespace raisim_sensors {
       /// \param[in] imu_wrt_link_offset offset of the IMU w.r.t. the link frame origin
       /// \param[in] world pointer to the simulated world
       /// \param[in] noise_source noise source for the measured quantity (NULL if no noise)
-      accelerometer(raisim::ArticulatedSystem * robot, double sampleTime, const std::string sensor_link_name, Eigen::Vector3d imu_wrt_link_offset, raisim::World *world, noise<Eigen::Vector3d> * noise_source = NULL)
-      : sensor( sampleTime, noise_source), imu_wrt_link_offset_(imu_wrt_link_offset), world_(world) {
+      accelerometer(raisim::ArticulatedSystem * robot, double sampleTime, const std::string sensor_link_name, Eigen::Vector3d imu_wrt_link_offset, Eigen::Vector3d gravity, noise<Eigen::Vector3d> * noise_source = NULL)
+      : sensor( sampleTime, noise_source), imu_wrt_link_offset_(imu_wrt_link_offset), gravity_(gravity) {
         robot_ = robot;
         baseLink_ = attachToLink(sensor_link_name);
         prev_robot_linear_velocity_W_.setZero();
@@ -248,7 +248,7 @@ namespace raisim_sensors {
       sensorTypes getType() {return sensorTypes::ACCELEROMETER;};
 
     private:
-      raisim::World * world_;
+      Eigen::Vector3d gravity_;
       Eigen::Vector3d imu_wrt_link_offset_;
       raisim::Vec<3> prev_robot_linear_velocity_W_, prev_imu_linear_velocity_W_;
   };
@@ -291,9 +291,9 @@ namespace raisim_sensors {
       /// \param[in] world pointer to the simulated world
       /// \param[in] accel_noise noise source for the accelerometer quantity (NULL if no noise)
       /// \param[in] gyro_noise noise source for the gyroscope quantity (NULL if no noise)
-      imu(raisim::ArticulatedSystem * robot, double sampleTime, const std::string sensor_link_name, Eigen::Vector3d imu_wrt_link_offset, raisim::World *world, noise<Eigen::Vector3d> * accel_noise = NULL, noise<Eigen::Vector3d> * gyro_noise = NULL)
+      imu(raisim::ArticulatedSystem * robot, double sampleTime, const std::string sensor_link_name, Eigen::Vector3d imu_wrt_link_offset, Eigen::Vector3d gravity, noise<Eigen::Vector3d> * accel_noise = NULL, noise<Eigen::Vector3d> * gyro_noise = NULL)
       : sensor(sampleTime, NULL) {
-          accel_ = new accelerometer(robot, sampleTime, sensor_link_name, imu_wrt_link_offset, world, accel_noise);
+          accel_ = new accelerometer(robot, sampleTime, sensor_link_name, imu_wrt_link_offset, gravity, accel_noise);
           gyro_  = new gyroscope(robot, sampleTime, sensor_link_name, gyro_noise);  
           measureGT_.resize(6);
           measure_.resize(6);
@@ -307,7 +307,7 @@ namespace raisim_sensors {
       /// \param[in] imu_wrt_link_offset offset of the IMU w.r.t. the link frame origin
       /// \param[in] world pointer to the simulated world
       /// \param[in] params IMU parameters
-      imu(raisim::ArticulatedSystem * robot, double sampleTime, Eigen::Vector3d imu_wrt_link_offset, raisim::World *world, const Yaml::Node& cfg)
+      imu(raisim::ArticulatedSystem * robot, double sampleTime, Eigen::Vector3d imu_wrt_link_offset, Eigen::Vector3d gravity, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL) {
         raisim_sensors::imu_param accel_params, gyro_params;
         accel_params.bias_correlation_time  = cfg["accelerometerBiasCorrelationTime"].template As<float>();
@@ -324,7 +324,7 @@ namespace raisim_sensors {
         imuNoise *accelNoise = new raisim_sensors::imuNoise(sampleTime,accel_params);
         imuNoise *gyroNoise = new raisim_sensors::imuNoise(sampleTime,gyro_params);
 
-        accel_ = new accelerometer(robot, sampleTime, link_name, imu_wrt_link_offset, world, accelNoise);
+        accel_ = new accelerometer(robot, sampleTime, link_name, imu_wrt_link_offset, gravity, accelNoise);
         gyro_  = new gyroscope(robot, sampleTime, link_name, gyroNoise);  
         measureGT_.resize(6);
         measure_.resize(6);

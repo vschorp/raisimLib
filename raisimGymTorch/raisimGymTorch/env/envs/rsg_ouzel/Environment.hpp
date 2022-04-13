@@ -65,6 +65,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
 
+    // Add sensors
+    Eigen::Vector3d imu_wrt_base_offset_B(0,0, -0.03);  // from ros_raisim_interface
+    imu_ = raisim_sensors::imu(ouzel_, sampling_time_, imu_wrt_base_offset_B, world_->getGravity().e(), cfg["imu"]);
+    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, cfg["odometry"]);
+
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
 //    footIndices_.insert(anymal_->getBodyIdx("RF_SHANK"));
@@ -263,6 +268,9 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::Matrix3d ref_orientation_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
+
+  raisim_sensors::imu imu_;
+  raisim_sensors::odometry odometry_;
 
   /// these variables are not in use. They are placed to show you how to create a random number sampler.
   //  std::normal_distribution<double> normDist_;
