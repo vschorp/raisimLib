@@ -89,7 +89,7 @@ if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)
 
 # for update in range(1000000):
-for update in range(1000):
+for update in range(100):
     start = time.time()
     env.reset()
     reward_ll_sum = 0
