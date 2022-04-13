@@ -10,5 +10,5 @@ from raisimGymTorch.helper.raisim_gym_helper import ConfigurationSaver, tensorbo
 #                            save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp"])
 
 # tensorboard_launcher(saver.data_dir+"/..")
-tensorboard_launcher('/home/vincent/rl_4_aerial_manipulator/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_only_planning/')
-# tensorboard_launcher('/home/vincent/ouzel_only_planning')
+# tensorboard_launcher('/home/vincent/rl_4_aerial_manipulator/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_only_planning/')
+tensorboard_launcher('/home/vincent/ouzel_only_planning')

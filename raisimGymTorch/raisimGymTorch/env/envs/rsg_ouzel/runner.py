@@ -14,6 +14,7 @@ import torch
 import datetime
 import argparse
 
+print("started runner.py script")
 
 # task specification
 task_name = "ouzel_only_planning"
@@ -88,8 +89,7 @@ ppo = PPO.PPO(actor=actor,
 if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)
 
-# for update in range(1000000):
-for update in range(100):
+for update in range(1000000):
     start = time.time()
     env.reset()
     reward_ll_sum = 0
