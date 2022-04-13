@@ -12,6 +12,7 @@
 
 #include "../../RaisimGymEnv.hpp"
 #include "impedance_control_module.h"
+#include "sensors.h"
 
 namespace raisim {
 

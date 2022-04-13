@@ -3,104 +3,9 @@
  *  Eugenio Cuniato 21.07.2021
  */
 
-#include "ros_raisim_interface/sensors.h"
+#include "sensors.h"
 
 namespace raisim_sensors {
-
-  void accelToImuMsg(const Eigen::Vector3d accel, sensor_msgs::Imu& msg) {
-    msg.header.stamp = ros::Time::now();
-    
-    msg.orientation.x = 0;
-    msg.orientation.y = 0;
-    msg.orientation.z = 0;
-    msg.orientation.w = 0;
-    msg.orientation_covariance[0] = -1;
-
-    msg.linear_acceleration.x = accel(0);
-    msg.linear_acceleration.y = accel(1);
-    msg.linear_acceleration.z = accel(2);
-    for (int i = 0; i<9; i++){
-      msg.orientation_covariance[i] = -1.;
-      msg.linear_acceleration_covariance[i] = 0.0;
-    }
-  }
-
-  void gyroToImuMsg(const Eigen::Vector3d gyro, sensor_msgs::Imu& msg) {
-    msg.header.stamp = ros::Time::now();
-    
-    msg.orientation.x = 0;
-    msg.orientation.y = 0;
-    msg.orientation.z = 0;
-    msg.orientation.w = 0;
-
-    msg.angular_velocity.x = gyro(0);
-    msg.angular_velocity.y = gyro(1);
-    msg.angular_velocity.z = gyro(2);
-    for (int i = 0; i<9; i++){
-      msg.orientation_covariance[i] = -1.;
-      msg.angular_velocity_covariance[i] = 0.0;
-    }
-  }
-
-  void poseToTransformMsg(const Eigen::VectorXd meas, const std::string child_frame, geometry_msgs::TransformStamped& msg) {
-    Eigen::Vector3d pos = meas.head(3);
-    Eigen::Vector4d quat = meas.tail(4);
-    msg.header.stamp = ros::Time::now();
-    
-    msg.header.frame_id = "world";
-    msg.child_frame_id = child_frame;
-    msg.transform.translation.x = pos[0];
-    msg.transform.translation.y = pos[1];
-    msg.transform.translation.z = pos[2];
-    msg.transform.rotation.w = quat[0];
-    msg.transform.rotation.x = quat[1];
-    msg.transform.rotation.y = quat[2];
-    msg.transform.rotation.z = quat[3];
-  }
-
-  void forceToWrenchMsg(const Eigen::VectorXd meas, const std::string child_frame, geometry_msgs::WrenchStamped& msg) {
-    msg.header.stamp = ros::Time::now();
-    
-    msg.header.frame_id = child_frame;
-    msg.wrench.force.x = meas[0];
-    msg.wrench.force.y = meas[1];
-    msg.wrench.force.z = meas[2];
-    msg.wrench.torque.x = meas[3];
-    msg.wrench.torque.y = meas[4];
-    msg.wrench.torque.z = meas[5];
-  }
-
-  void forceToContactMsg(const Eigen::VectorXd meas, const std::string child_frame, const bool in_contact, ros_raisim_interface::ContactInformation& msg) {
-    msg.header.stamp = ros::Time::now();
-    
-    msg.header.frame_id = child_frame;
-    msg.contact_force.x = meas[0];
-    msg.contact_force.y = meas[1];
-    msg.contact_force.z = meas[2];
-    msg.in_contact = in_contact;
-    msg.friction_coefficient = meas[4];
-  }
-
-  void odomToOdomMsg(const Eigen::VectorXd meas, const std::string child_frame, nav_msgs::Odometry& msg) {
-    msg.header.stamp = ros::Time::now();
-    msg.header.frame_id = "world";
-    msg.child_frame_id = child_frame;
-    msg.pose.pose.position.x = meas[0];
-    msg.pose.pose.position.y = meas[1];
-    msg.pose.pose.position.z = meas[2];
-    msg.pose.pose.orientation.w = meas[3];
-    msg.pose.pose.orientation.x = meas[4];
-    msg.pose.pose.orientation.y = meas[5];
-    msg.pose.pose.orientation.z = meas[6];
-    msg.pose.covariance.fill(0.0);
-    msg.twist.twist.linear.x = meas[7];
-    msg.twist.twist.linear.y = meas[8];
-    msg.twist.twist.linear.z = meas[9];
-    msg.twist.twist.angular.x = meas[10];
-    msg.twist.twist.angular.y = meas[11];
-    msg.twist.twist.angular.z = meas[12];
-    msg.twist.covariance.fill(0.0);
-  }
 
   void accelerometer::update() {
     raisim::Vec<3> robot_linear_velocity_W, imu_linear_velocity_W;
@@ -121,13 +26,6 @@ namespace raisim_sensors {
     } else {
       measure_ = measureGT_;
     }
-
-    accelToImuMsg(measure_,measMsg_);
-    accelToImuMsg(measureGT_,measGTMsg_);
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
-
   }
 
   void gyroscope::update() {
@@ -145,14 +43,6 @@ namespace raisim_sensors {
     } else {
       measure_ = measureGT_;
     }
-
-    gyroToImuMsg(measure_,measMsg_);
-    gyroToImuMsg(measureGT_,measGTMsg_);
-
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
-
   }
 
   imuNoise::imuNoise(double sampleTime, imu_param parameters) : noise(sampleTime), params_(parameters) {
@@ -195,15 +85,6 @@ namespace raisim_sensors {
     measure_.tail(3) =   gyro_->getMeas();
     measureGT_.head(3) =accel_->getMeasGT();
     measureGT_.tail(3) = gyro_->getMeasGT();
-
-    accelToImuMsg(measure_.head(3),measMsg_);
-    gyroToImuMsg(measure_.tail(3),measMsg_);
-    accelToImuMsg(measureGT_.head(3),measGTMsg_);
-    gyroToImuMsg(measureGT_.tail(3),measGTMsg_);
-
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
   }
 
   void vicon::update() {
@@ -227,14 +108,6 @@ namespace raisim_sensors {
     } else {
       measure_ = measureGT_;
     }
-
-    poseToTransformMsg(measure_, childFrameName_, measMsg_);
-    poseToTransformMsg(measureGT_, childFrameName_, measGTMsg_);
-
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
-
   }  
   
   void odometry::update() {
@@ -258,14 +131,6 @@ namespace raisim_sensors {
     } else {
       measure_ = measureGT_;
     }
-
-    odomToOdomMsg(measure_, childFrameName_, measMsg_);
-    odomToOdomMsg(measureGT_, childFrameName_, measGTMsg_);
-
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
-
   }
 
   void force::update() {
@@ -310,14 +175,6 @@ namespace raisim_sensors {
     } else {
       measure_ = measureGT_;
     }
-
-    forceToWrenchMsg(measure_, childFrameName_, measMsg_);
-    forceToWrenchMsg(measureGT_, childFrameName_, measGTMsg_);
-
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
-
   }
 
   void contact::update() {
@@ -358,14 +215,6 @@ namespace raisim_sensors {
     } else {
       measure_ = measureGT_;
     }
-
-    forceToContactMsg(measure_, childFrameName_, in_contact, measMsg_);
-    forceToContactMsg(measureGT_, childFrameName_, in_contact, measGTMsg_);
-
-    msgReady_ = true;
-    if(updatePublish_)
-      publish();
-
   }
 
 }

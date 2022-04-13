@@ -78,7 +78,7 @@ set(RAISIMGYM_ENV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
 
 ######## Env ##########
 FOREACH(subdir ${SUBDIRS})
-    pybind11_add_module(${subdir} raisimGymTorch/env/raisim_gym.cpp raisimGymTorch/env/Yaml.cpp raisimGymTorch/env/envs/rsg_ouzel/impedance_control_module.cpp)
+    pybind11_add_module(${subdir} raisimGymTorch/env/raisim_gym.cpp raisimGymTorch/env/Yaml.cpp raisimGymTorch/env/envs/rsg_ouzel/impedance_control_module.cpp raisimGymTorch/env/envs/rsg_ouzel/sensors.cpp)
     target_link_libraries(${subdir} PRIVATE raisim::raisim ${Dependencies})
     target_include_directories(${subdir} PUBLIC ${EIGEN3_INCLUDE_DIRS} ${RAISIMGYM_ENV_DIR}/${subdir} ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env)
     target_compile_options(${subdir} PRIVATE -fPIC -O3 -flto -mno-avx2)
@@ -98,7 +98,7 @@ FOREACH(subdir ${SUBDIRS})
 
     if (CMAKE_BUILD_TYPE STREQUAL "DEBUG" OR CMAKE_BUILD_TYPE STREQUAL "Debug")
         message("[RAISIM_GYM] BUILDING THE DEBUG APP for ${subdir}")
-        add_executable(${subdir}_debug_app raisimGymTorch/env/debug_app.cpp raisimGymTorch/env/Yaml.cpp raisimGymTorch/env/envs/rsg_ouzel/impedance_control_module.cpp)
+        add_executable(${subdir}_debug_app raisimGymTorch/env/debug_app.cpp raisimGymTorch/env/Yaml.cpp raisimGymTorch/env/envs/rsg_ouzel/impedance_control_module.cpp raisimGymTorch/env/envs/rsg_ouzel/sensors.cpp)
         target_link_libraries(${subdir}_debug_app PRIVATE raisim::raisim)
         target_include_directories(${subdir}_debug_app PUBLIC raisimGymTorch/env/envs/${subdir} ${EIGEN3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env)
         if(WIN32)

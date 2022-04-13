@@ -3,18 +3,13 @@
  *  Eugenio Cuniato 21.07.2021
  */
 
-#include "ros/ros.h"
 #include "raisim/World.hpp"
-#include "sensor_msgs/Imu.h"
-#include "geometry_msgs/TransformStamped.h"
-#include "nav_msgs/Odometry.h"
-#include "geometry_msgs/WrenchStamped.h"
-#include "ros_raisim_interface/ContactInformation.h"
 #include <boost/circular_buffer.hpp>
-#include "ros_raisim_interface/parser.h"
 #include <Eigen/Core>
 
 #include <deque>
+
+#include "Yaml.hpp"
 
 #ifndef RAISIM_SIMULATOR_SENSORS_
 #define RAISIM_SIMULATOR_SENSORS_
@@ -118,7 +113,7 @@ namespace raisim_sensors {
     protected:
       double sampleTime_;
       T noise_;
-      std::default_random_engine randomGenerator_;
+      thread_local static std::mt19937 randomGenerator_;
       std::normal_distribution<double> standardNormalDistribution_;
   };
 
@@ -128,7 +123,7 @@ namespace raisim_sensors {
    */
   class imuNoise : public noise<Eigen::Vector3d> {
     public:
-      /// \brief IMU noise constructor.
+       /// \brief IMU noise constructor.
       /// \param[in] sampleTime noise computation sample time
       /// \param[in] parameters IMU noise parameters
       imuNoise(double sampleTime, imu_param parameters);
@@ -138,96 +133,6 @@ namespace raisim_sensors {
     private:
       imu_param params_;
       Eigen::Vector3d bias_, turnOnBias_;
-  };
-
-  /**
-   * \class sensorPublisher
-   * \brief Sensor publisher class
-   * \param[in] T type of the measured quantity (usually a Eigen::VectorXd or similiar)
-   */
-  template <class T>
-  class sensorPublisher {
-    public:
-      /// \brief sensorPublisher constructor.
-      /// \param[in] n ros node handle
-      /// \param[in] topic_name name of the topic to publish
-      /// \param[in] rate_hz publishing rate (-1 means publish on update)
-      /// \param[in] publish_gt true if ground truth has to be published
-      sensorPublisher(ros::NodeHandle* n=NULL, std::string topic_name="", double rate_hz = -1, bool publish_gt=false)
-      : n_(n), rateHz_(rate_hz), topicName_(topic_name) {
-        init_ = false;
-        if(n!=NULL) {
-          pub_ = n_->advertise<T>(topic_name, 1);
-          if (publishGT_)
-            pubGT_ = n_->advertise<T>("ground_truth/"+topic_name, 1);
-          init_ = true;
-        }
-        measDelay_ = 0;
-        publishGT_ = publish_gt;
-      };
-
-      /// \brief message publisher.
-      /// \param[in] value noisy message to publish
-      /// \param[in] value ground thruth message to publish
-      void publish(T value, T value_gt) {
-        if(measDelay_< 0) {
-          pub_.publish(value);
-        } else {
-          double currentWorldTime = ros::Time::now().toSec();
-          msgQueue_.push_back(std::make_pair(currentWorldTime+measDelay_, value));
-          if (currentWorldTime > msgQueue_.front().first ){
-            T delayedMsg;
-            delayedMsg = msgQueue_.front().second;
-            msgQueue_.pop_front();
-            pub_.publish(delayedMsg);
-          }
-        }
-
-        if(publishGT_) {
-          pubGT_.publish(value_gt);
-        }
-      }
-
-      /// \brief publisher init.
-      /// \param[in] n ros node handle
-      /// \param[in] topic_name name of the topic to publish
-      /// \param[in] rate_hz publishing rate (-1 means publish on update)
-      /// \param[in] publish_gt true if ground truth has to be published
-      void init(ros::NodeHandle* n, std::string topic_name, double rate_hz = -1, bool publish_gt=false) {
-        
-        if(n!=NULL) {
-          n_ = n;
-          pub_ = n_->advertise<T>(topic_name, 1000);
-          pubGT_ = n_->advertise<T>("ground_truth/"+topic_name, 1);
-          init_ = true;
-          publishGT_ = publish_gt;
-          rateHz_ = rate_hz;
-        }else {
-          ROS_ERROR("Node handle not valid. Publisher not initialized");
-        }
-      }
-
-      /// \brief get publisher rate.
-      /// \return publishing rate
-      double getHz() {return rateHz_;};
-      /// \brief is node initialized.
-      /// \return true if initialized
-      bool isInit() {return init_;};
-      /// \brief Set sensor meas delay.
-      /// \param[in] delay delay to set in seconds
-      void setMeasDelay(double delay) {measDelay_=delay;};
-      /// \brief get the node handle.
-      /// \return the node handle
-      ros::NodeHandle* getHandle() {return n_;};
-
-    protected:
-      std::string topicName_;
-      bool publishGT_;
-      ros::NodeHandle* n_;
-      ros::Publisher pub_, pubGT_;
-      double rateHz_, measDelay_;
-      bool init_;
-      std::deque<std::pair<double, T>> msgQueue_;
   };
 
   /**
@@ -243,21 +148,9 @@ namespace raisim_sensors {
       /// \brief get sensor type.
       /// \return sensor type
       virtual sensorTypes getType() = 0;
-      /// \brief start the publisher.
-      /// \return true if all went right
-      virtual bool startPublishing() = 0;
-      /// \brief set measurement delay.
-      /// \param[in] delay delay to set in seconds
-      virtual void setMeasDelay(double delay) = 0;
       /// \brief Update sample time.
       /// \param[in] sampleTime sample time to set in seconds
       virtual void updateSampleTime(const double sampleTime) = 0;
-      /// \brief publisher init.
-      /// \param[in] n ros node handle
-      /// \param[in] topic_name name of the topic to publish
-      /// \param[in] rate_hz publishing rate (-1 means publish on update)
-      /// \param[in] publish_gt true if ground truth has to be published
-      virtual void initPublisher(ros::NodeHandle* n, const std::string topic_name, double rate_hz = -1, bool publish_gt=false) = 0;
   };
 
   /**
@@ -266,7 +159,7 @@ namespace raisim_sensors {
   * \param[in] T sensor vector type
   * \param[in] msg message to be published type
   */
-  template <class T, class msg>
+  template <class T>
   class sensor : public virtualSensor{
     public:
       /// \brief base sensor constructor.
@@ -275,7 +168,6 @@ namespace raisim_sensors {
       sensor( double sampleTime, noise<T> * noise_source = NULL)
       : sampleTime_(sampleTime), noiseSource_(noise_source) {
         msgReady_ = false;
-        updatePublish_ = false;
       };
 
       /// \brief update sensor value.
@@ -283,50 +175,17 @@ namespace raisim_sensors {
       /// \brief get sensor type.
       /// \return sensor type
       virtual sensorTypes getType() = 0;
-      
-      /// \brief start the publisher.
-      /// \return true if all went right
-      bool startPublishing() {
-        if (!publisher.isInit())
-          return false;
-        if(publisher.getHz()<=0)
-          updatePublish_ = true; //publish on update
-        else {
-          // Create a ROS timer for timed publishing
-          updatePublish_ = false;
-          timerPublish_ =
-            publisher.getHandle()->createTimer(ros::Duration(1.0/publisher.getHz()),
-                          std::bind(&sensor<T,msg>::publish, this));
-        }
-        return true; 
-      }
+
       /// \brief Update sample time.
       /// \param[in] sampleTime sample time to set in seconds
       void updateSampleTime(const double sampleTime) {sampleTime_=sampleTime;};
-      /// \brief publisher init.
-      /// \param[in] n ros node handle
-      /// \param[in] topic_name name of the topic to publish
-      /// \param[in] rate_hz publishing rate (-1 means publish on update)
-      /// \param[in] publish_gt true if ground truth has to be published
-      void initPublisher(ros::NodeHandle* n, const std::string topic_name, double rate_hz = -1, bool publish_gt=false) {
-        publisher.init(n, topic_name,rate_hz,publish_gt);
-      }
-      /// \brief set measurement delay.
-      /// \param[in] delay delay to set in seconds
-      void setMeasDelay(double delay) {publisher.setMeasDelay(delay);};
+
       /// \brief get noisy measurement.
       /// \return the measurement
       T getMeas() {return measure_;};
       /// \brief get ground truth measurement.
       /// \return the measurement
       T getMeasGT() {return measureGT_;};
-
-    protected: 
-      /// \brief send messages to the publisher.
-      void publish() {
-        if(msgReady_)
-          publisher.publish(measMsg_,measGTMsg_);
-      }
 
     protected:
       /// \brief attach sensor to the link.
@@ -342,17 +201,12 @@ namespace raisim_sensors {
         const std::string joint = "joint";
         size_t pos = sensor_link_name.find(link);
         if(pos!=std::string::npos) {
-          //ROS_WARN_STREAM("Could not find sensor link "<<sensor_link_name);
           sensor_link_name.replace(pos,joint.length(),joint);
-          //ROS_WARN_STREAM("Trying with a joint "<<sensor_link_name);
-          //ROS_WARN_STREAM("Got link: "<<robot_->getFrameByName(sensor_link_name).currentBodyId);
           base_link = robot_->getFrameByName(sensor_link_name).currentBodyId;
           if(base_link!=-1) {
-            ROS_INFO_STREAM("Sensor attached to link: "<<robot_->getFrameByName(sensor_link_name).bodyName);
             return base_link;
           } 
         }
-        ROS_WARN_STREAM("Could not find sensor link "<<sensor_link_name<<". Attaching to ROOT link.");
         base_link = 0;
         return base_link;
       };
@@ -360,11 +214,7 @@ namespace raisim_sensors {
       double sampleTime_;
       T measure_;
       T measureGT_;
-      msg measMsg_;
-      msg measGTMsg_;
       bool msgReady_, updatePublish_;
-      sensorPublisher<msg> publisher;
-      ros::Timer timerPublish_;
       size_t baseLink_;
       raisim::ArticulatedSystem * robot_;
   };
@@ -375,7 +225,7 @@ namespace raisim_sensors {
    * \brief Accelerometer sensor class
   */
 
-  class accelerometer : public sensor<Eigen::Vector3d, sensor_msgs::Imu> {
+  class accelerometer : public sensor<Eigen::Vector3d> {
     public:
       /// \brief accelerometer sensor constructor.
       /// \param[in] robot robot where to place the accelerometer
@@ -407,7 +257,7 @@ namespace raisim_sensors {
    * \class gyroscope
   * \brief Gyroscope sensor class
   */
-  class gyroscope : public sensor<Eigen::Vector3d, sensor_msgs::Imu> {
+  class gyroscope : public sensor<Eigen::Vector3d> {
     public:
       /// \brief gyroscope sensor constructor.
       /// \param[in] robot robot where to place the accelerometer
@@ -431,7 +281,7 @@ namespace raisim_sensors {
   * \class imu
   * \brief IMU sensor class
   */
-  class imu : public sensor<Eigen::VectorXd, sensor_msgs::Imu> {
+  class imu : public sensor<Eigen::VectorXd> {
     public:
       /// \brief imu sensor constructor.
       /// \param[in] robot robot where to place the accelerometer
@@ -457,22 +307,20 @@ namespace raisim_sensors {
       /// \param[in] imu_wrt_link_offset offset of the IMU w.r.t. the link frame origin
       /// \param[in] world pointer to the simulated world
       /// \param[in] params IMU parameters
-      imu(raisim::ArticulatedSystem * robot, double sampleTime, Eigen::Vector3d imu_wrt_link_offset, raisim::World *world, imuParams& params)
+      imu(raisim::ArticulatedSystem * robot, double sampleTime, Eigen::Vector3d imu_wrt_link_offset, raisim::World *world, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL) {
         raisim_sensors::imu_param accel_params, gyro_params;
+        accel_params.bias_correlation_time  = cfg["accelerometerBiasCorrelationTime"].template As<float>();
+        accel_params.turnOnBias_sigma       = cfg["accelerometerTurnOnBiasSigma"].template As<float>();
+        accel_params.noise_density          = cfg["accelerometerNoiseDensity"].template As<float>();
+        accel_params.random_walk            = cfg["accelerometerRandomWalk"].template As<float>();
+        gyro_params.bias_correlation_time   = cfg["gyroscopeBiasCorrelationTime"].template As<float>();
+        gyro_params.turnOnBias_sigma        = cfg["gyroscopeTurnOnBiasSigma"].template As<float>();
+        gyro_params.noise_density           = cfg["gyroscopeNoiseDensity"].template As<float>();
+        gyro_params.random_walk             = cfg["gyroscopeRandomWalk"].template As<float>();
 
-        accel_params.bias_correlation_time  = params.getParamDouble("accelerometerBiasCorrelationTime");
-        accel_params.turnOnBias_sigma       = params.getParamDouble("accelerometerTurnOnBiasSigma");
-        accel_params.noise_density          = params.getParamDouble("accelerometerNoiseDensity");
-        accel_params.random_walk            = params.getParamDouble("accelerometerRandomWalk");
-        gyro_params.bias_correlation_time   = params.getParamDouble("gyroscopeBiasCorrelationTime");
-        gyro_params.turnOnBias_sigma        = params.getParamDouble("gyroscopeTurnOnBiasSigma");
-        gyro_params.noise_density           = params.getParamDouble("gyroscopeNoiseDensity");
-        gyro_params.random_walk             = params.getParamDouble("gyroscopeRandomWalk");
-
-        std::string imu_topic = params.getParamString("imuTopic");
-        std::string link_name = params.getParamString("linkName");
-        std::string sensorNamespace = params.getParamString("robotNamespace");
+        std::string link_name = cfg["linkName"].template As<std::string>();
+        std::string sensorNamespace = cfg["robotNamespace"].template As<std::string>();
         imuNoise *accelNoise = new raisim_sensors::imuNoise(sampleTime,accel_params);
         imuNoise *gyroNoise = new raisim_sensors::imuNoise(sampleTime,gyro_params);
 
@@ -499,7 +347,7 @@ namespace raisim_sensors {
    * \class vicon
   * \brief Vicon sensor class
   */
-  class vicon : public sensor<Eigen::VectorXd, geometry_msgs::TransformStamped> {
+  class vicon : public sensor<Eigen::VectorXd> {
     public:
       /// \brief vicon sensor constructor.
       ///\param[in] robot robot where to place the sensor
@@ -523,10 +371,10 @@ namespace raisim_sensors {
       ///\param[in] robot robot where to place the sensor
       ///\param[in] sampleTime sample time of the simulated world
       ///\param[in] params Vicon sensor parameters
-      vicon(raisim::ArticulatedSystem * robot, double sampleTime, odometryParams& params)
+      vicon(raisim::ArticulatedSystem * robot, double sampleTime, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL) {
-        std::string sensor_link_name = params.getParamString("linkName");
-        childFrameName_ = params.getParamString("childFrameId");
+        std::string sensor_link_name = cfg["linkName"].template As<std::string>();
+        childFrameName_ = cfg["childFrameId"].template As<std::string>();
         robot_ = robot;
         baseLink_ = attachToLink(sensor_link_name);
         articulated_ = true;
@@ -557,9 +405,9 @@ namespace raisim_sensors {
       ///\param[in] obj Single object where to place the sensor
       ///\param[in] sampleTime sample time of the simulated world
       ///\param[in] params Vicon sensor parameters
-      vicon(raisim::SingleBodyObject * obj, double sampleTime, viconParams& params)
+      vicon(raisim::SingleBodyObject * obj, double sampleTime, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL) {
-        childFrameName_ = params.getParamString("childFrameId");
+        childFrameName_ = cfg["childFrameId"].template As<std::string>();
         obj_ = obj;
         articulated_ = false;
         measureGT_.resize(7);
@@ -584,7 +432,7 @@ namespace raisim_sensors {
    * \class odometry
   * \brief Odometry sensor class
   */
-  class odometry : public sensor<Eigen::VectorXd, nav_msgs::Odometry> {
+  class odometry : public sensor<Eigen::VectorXd> {
     public:
       /// \brief odometry sensor constructor.
       /// \param[in] robot robot where to place the sensor
@@ -607,11 +455,11 @@ namespace raisim_sensors {
       /// \param[in] robot robot where to place the sensor
       /// \param[in] sampleTime sample time of the simulated world
       /// \param[in] params Odometry sensor parameters
-      odometry(raisim::ArticulatedSystem *robot, double sampleTime, odometryParams &params)
+      odometry(raisim::ArticulatedSystem *robot, double sampleTime, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL) {
         robot_ = robot;
-        std::string sensor_link_name = params.getParamString("linkName");
-        childFrameName_ = params.getParamString("childFrameId");
+        std::string sensor_link_name = cfg["linkName"].template As<std::string>();
+        childFrameName_ = cfg["childFrameId"].template As<std::string>();
         baseLink_ = attachToLink(sensor_link_name);
         measureGT_.resize(7+6);
         measure_.resize(7+6);
@@ -633,7 +481,7 @@ namespace raisim_sensors {
   * \class force
   * \brief Force sensor class
   */
-  class force : public sensor<Eigen::VectorXd, geometry_msgs::WrenchStamped> {
+  class force : public sensor<Eigen::VectorXd> {
     public:
       /// \brief force sensor constructor.
       /// \param[in] robot robot where to place the force sensor
@@ -660,9 +508,9 @@ namespace raisim_sensors {
       /// \param[in] sampleTime sample time of the simulated world
       /// \param[in] child_frame_name name of the frame for the published transform
       /// \param[in] params force sensor params
-      force(raisim::ArticulatedSystem *robot, raisim::World *world, double sampleTime, const std::string child_frame_name, forceParams &params)
+      force(raisim::ArticulatedSystem *robot, raisim::World *world, double sampleTime, const std::string child_frame_name, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL), impulseFilter_(3,3),angularImpulseFilter_(3,3) {
-        std::string sensor_link_name = params.getParamString("linkName");
+        std::string sensor_link_name = cfg["linkName"].template As<std::string>();
         childFrameName_ = child_frame_name;
         robot_ = robot;
         world_ = world;
@@ -691,7 +539,7 @@ namespace raisim_sensors {
    * \class contact
   * \brief Contact sensor class. Gives info on the contact friction.
   */
-  class contact : public sensor<Eigen::VectorXd, ros_raisim_interface::ContactInformation> {
+  class contact : public sensor<Eigen::VectorXd> {
     public:
       /// \brief contact sensor constructor.
       /// \param[in] robot robot where to place the force sensor
@@ -718,9 +566,9 @@ namespace raisim_sensors {
       /// \param[in] sampleTime sample time of the simulated world
       /// \param[in] child_frame_name name of the frame for the published transform
       /// \param[in] params contact sensor parameters
-      contact(raisim::ArticulatedSystem *robot, raisim::World *world, double sampleTime, const std::string child_frame_name, forceParams &params)
+      contact(raisim::ArticulatedSystem *robot, raisim::World *world, double sampleTime, const std::string child_frame_name, const Yaml::Node& cfg)
       : sensor(sampleTime, NULL), impulseFilter_(3,3) {
-        std::string sensor_link_name = params.getParamString("linkName");
+        std::string sensor_link_name = cfg["linkName"].template As<std::string>();
         childFrameName_ = child_frame_name;
         robot_ = robot;
         world_ = world;
