@@ -122,7 +122,7 @@ for update in range(1000000):
                 reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
                 frame_end = time.time()
                 wait_time = cfg['environment']['control_dt'] - (frame_end-frame_start)
-                if wait_time > 0.:
+                if wait_time > 0. and not on_cluster:
                     time.sleep(wait_time)
 
         if not on_cluster:
