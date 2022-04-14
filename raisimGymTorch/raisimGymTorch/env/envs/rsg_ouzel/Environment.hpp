@@ -22,7 +22,6 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   explicit ENVIRONMENT(const std::string& resourceDir, const Yaml::Node& cfg, bool visualizable) :
       RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable), unifDistPlusMinusOne_(-1.0, 1.0), controller_(cfg["controller"]) {
-
     /// create world
     world_ = std::make_unique<raisim::World>();
     /// add objects
@@ -108,8 +107,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     auto actionD = action.cast<double>();
     Eigen::Vector3d ref_position_corr_vec = actionD.segment(0, 3);
     Eigen::Quaterniond ref_orientation_corr = QuaternionFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
-    std::cout << "action ref pos: " << ref_position_corr_vec << std::endl;
-    std::cout << "action ref orient: " << ref_orientation_corr.coeffs() << std::endl;
+//    std::cout << "action ref pos: " << ref_position_corr_vec << std::endl;
+//    std::cout << "action ref orient: " << ref_orientation_corr.coeffs() << std::endl;
     controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr);
 
     mav_msgs::EigenTorqueThrust wrench_command;
@@ -135,10 +134,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     double waypoint_dist, error_angle;
     computeErrorMetrics(waypoint_dist, error_angle);
     Eigen::AngleAxisd ref_orientation_corr_angle_axis(ref_orientation_corr);
-    rewards_.record("waypointDist", waypoint_dist);
-    rewards_.record("orientError", error_angle);
-    rewards_.record("linearRefCorr", ref_position_corr_vec.squaredNorm());
-    rewards_.record("orientRefCorr", ref_orientation_corr_angle_axis.angle());
+//    std::cout << "angle error: " << error_angle << std::endl;
+    rewards_.record("waypointDist", float(waypoint_dist));
+    rewards_.record("orientError", float(error_angle));
+    rewards_.record("linearRefCorr", float(ref_position_corr_vec.squaredNorm()));
+    rewards_.record("orientRefCorr", float(ref_orientation_corr_angle_axis.angle()));
 //    rewards_.record("angularVel", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("force", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("torque", anymal_->getGeneralizedForce().squaredNorm());

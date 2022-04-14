@@ -468,10 +468,10 @@ namespace rw_omav_controllers {
     }
 
     void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Quaterniond & _orientation_corr) {
-//      ref_.position_W = ref_position_;
+      ref_.position_W = ref_position_;
       if (_position_corr.norm() > 0) {
-//        ref_.position_W += _position_corr;
-        ref_.position_W = _position_corr;
+        ref_.position_W += _position_corr;
+//        ref_.position_W = _position_corr;
       }
       else {
         std::cout << "position model output has norm 0! Setting ref to 0" << std::endl;
@@ -481,9 +481,9 @@ namespace rw_omav_controllers {
         std::cout << "ref position is nan!!" << std::endl;
       }
 
-//      ref_.orientation_W_B = ref_quaternion_;
-//      ref_.orientation_W_B *= _orientation_corr;
-      ref_.orientation_W_B = _orientation_corr;
+      ref_.orientation_W_B = ref_quaternion_;
+      ref_.orientation_W_B *= _orientation_corr;
+//      ref_.orientation_W_B = _orientation_corr;
       if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
         std::cout << "ref orientation is nan!!" << std::endl;
       }
@@ -493,10 +493,10 @@ namespace rw_omav_controllers {
       ref_position_ = _position;
       ref_quaternion_ = _orientation;
 
-//      ref_.position_W = ref_position_;
-//      ref_.orientation_W_B = ref_quaternion_;
-      ref_.position_W = Eigen::Vector3d::Zero();
-      ref_.orientation_W_B = Eigen::Quaterniond::Identity();
+      ref_.position_W = ref_position_;
+      ref_.orientation_W_B = ref_quaternion_;
+//      ref_.position_W = Eigen::Vector3d::Zero();
+//      ref_.orientation_W_B = Eigen::Quaterniond::Identity();
     }
 
 }  // namespace rw_omav_controllers
