@@ -86,6 +86,8 @@ ppo = PPO.PPO(actor=actor,
               learning_rate=5e-4
               )
 
+on_cluster = cfg["on_cluster"]
+
 if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)
 
@@ -108,8 +110,9 @@ for update in range(1000000):
         loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim)
         loaded_graph.load_state_dict(torch.load(saver.data_dir+"/full_"+str(update)+'.pt')['actor_architecture_state_dict'])
 
-        env.turn_on_visualization()
-        env.start_video_recording(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "policy_"+str(update)+'.mp4')
+        if not on_cluster:
+            env.turn_on_visualization()
+            env.start_video_recording(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "policy_"+str(update)+'.mp4')
 
         for step in range(n_steps*2):
             with torch.no_grad():
@@ -122,8 +125,9 @@ for update in range(1000000):
                 if wait_time > 0.:
                     time.sleep(wait_time)
 
-        env.stop_video_recording()
-        env.turn_off_visualization()
+        if not on_cluster:
+            env.stop_video_recording()
+            env.turn_off_visualization()
 
         env.reset()
         env.save_scaling(saver.data_dir, str(update))
