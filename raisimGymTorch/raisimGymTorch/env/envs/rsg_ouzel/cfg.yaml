@@ -6,7 +6,7 @@ on_cluster: True
 environment:
   render: True
 # just testing commenting
-  num_envs: 64 #100
+  num_envs: 32 #100
   eval_every_n: 1000 #200
   num_threads: 32 #30
   simulation_dt: 0.0025
