@@ -19,9 +19,9 @@ environment:
     orientError:
       coeff: -1.0
     linearRefCorr:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
     orientRefCorr:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0
