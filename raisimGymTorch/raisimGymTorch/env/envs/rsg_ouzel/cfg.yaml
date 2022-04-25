@@ -79,6 +79,11 @@ environment:
   odometry:
     linkName: ouzel/base_link
     childFrameId: ouzel
+  odometryNoise:
+    pos_std: 0.1
+    orient_std: 0.1
+    lin_vel_std: 0.1
+    ang_vel_std: 0.1
 
 architecture:
   policy_net: [64, 64]

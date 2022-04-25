@@ -135,6 +135,24 @@ namespace raisim_sensors {
       Eigen::Vector3d bias_, turnOnBias_;
   };
 
+    /**
+   * \class imuNoise
+   * \brief IMU noise class
+   */
+    class odometryNoise : public noise<Eigen::VectorXd> {
+    public:
+        /// \brief IMU noise constructor.
+        /// \param[in] sampleTime noise computation sample time
+        /// \param[in] parameters IMU noise parameters
+        odometryNoise(double sampleTime, const Yaml::Node& cfg);
+        /// \brief Get sensor noise.
+        /// \return the sensor noise
+        Eigen::VectorXd getNoise();
+    private:
+        double pos_std_, orient_std_, lin_vel_std_, ang_vel_std_;
+        Eigen::Vector3d bias_, turnOnBias_;
+    };
+
   /**
    * \class virtualSensor
    * \brief Virtual class to collect all the sensors together

@@ -69,9 +69,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
 
     // Add sensors
-    Eigen::Vector3d imu_wrt_base_offset_B(0,0, -0.03);  // from ros_raisim_interface
-    imu_ = raisim_sensors::imu(ouzel_, sampling_time_, imu_wrt_base_offset_B, world_->getGravity().e(), cfg["imu"]);
-    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, cfg["odometry"]);
+    raisim_sensors::odometryNoise odometry_noise(sampling_time_, cfg["odometryNoise"]);
+    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, "ouzel", "ouzel/base_link", &odometry_noise);
 
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
@@ -148,9 +147,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void updateObservation() {
     // TODO add observations from sensor
-    imu_.update();
     odometry_.update();
-    Eigen::VectorXd odometry_measurement = odometry_.getMeasGT();
+    Eigen::VectorXd odometry_measurement = odometry_.getMeas();
     position_W_ = odometry_measurement.segment(0, 3);
     orientation_W_B_ = Eigen::Quaterniond(odometry_measurement(3), odometry_measurement(4), odometry_measurement(5), odometry_measurement(6));
     bodyLinearVel_ = odometry_measurement.segment(7, 3);
@@ -248,10 +246,13 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void computeErrorMetrics(double& waypointDist, double& errorAngle) {
     // Maybe want to clamp the error terms?
-    waypointDist = (position_W_ - ref_position_).squaredNorm();
+    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
+    Eigen::Vector3d position_W_gt = odometry_measurement_gt.segment(0, 3);
+    waypointDist = (position_W_gt - ref_position_).squaredNorm();
 
 //    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
-    auto error_quat = Eigen::Quaterniond (ref_orientation_) * orientation_W_B_.inverse();
+    Eigen::Quaterniond orientation_W_B_gt(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6));
+    auto error_quat = Eigen::Quaterniond (ref_orientation_) * orientation_W_B_gt.inverse();
     Eigen::AngleAxisd error_angle_axis(error_quat);
     errorAngle = error_angle_axis.angle();
   }
@@ -290,7 +291,6 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 
-  raisim_sensors::imu imu_;
   raisim_sensors::odometry odometry_;
 
   //  std::normal_distribution<double> normDist_;

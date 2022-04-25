@@ -76,7 +76,43 @@ namespace raisim_sensors {
     return noise_;
   }
 
-  void imu::update() {
+  odometryNoise::odometryNoise(double sampleTime, const Yaml::Node& cfg) : noise(sampleTime) {
+    pos_std_ = cfg["pos_std"].template As<float>();
+    orient_std_ = cfg["orient_std"].template As<float>();
+    lin_vel_std_ = cfg["lin_vel_std"].template As<float>();
+    ang_vel_std_ = cfg["ang_vel_std"].template As<float>();
+  }
+
+  Eigen::VectorXd odometryNoise::getNoise() {
+    Eigen::Vector3d pos_noise(standardNormalDistribution_(randomGenerator_),
+                              standardNormalDistribution_(randomGenerator_),
+                              standardNormalDistribution_(randomGenerator_));
+    pos_noise *= pos_std_;
+
+    Eigen::Vector3d lin_vel_noise(standardNormalDistribution_(randomGenerator_),
+                                  standardNormalDistribution_(randomGenerator_),
+                                  standardNormalDistribution_(randomGenerator_));
+    lin_vel_noise *= lin_vel_std_;
+
+    Eigen::Vector3d ang_vel_noise(standardNormalDistribution_(randomGenerator_),
+                                  standardNormalDistribution_(randomGenerator_),
+                                  standardNormalDistribution_(randomGenerator_));
+    ang_vel_noise *= ang_vel_std_;
+
+    Eigen::Vector3d orient_noise_rot_vec(standardNormalDistribution_(randomGenerator_),
+                                         standardNormalDistribution_(randomGenerator_),
+                                         standardNormalDistribution_(randomGenerator_));
+    Eigen::AngleAxisd orient_noise(standardNormalDistribution_(randomGenerator_) * orient_std_, orient_noise_rot_vec);
+    Eigen::Quaterniond orient_noise_quat(orient_noise);
+    orient_noise_quat.normalize();
+
+    Eigen::VectorXd noise(13);
+    noise << pos_noise, orient_noise_quat.coeffs(), lin_vel_noise, ang_vel_noise;
+    return noise;
+  }
+
+
+    void imu::update() {
     accel_->update();
 
     gyro_->update();
