@@ -81,9 +81,9 @@ environment:
     childFrameId: ouzel
   odometryNoise:
     pos_std: 0.1
-    orient_std: 0.1
-    lin_vel_std: 0.1
-    ang_vel_std: 0.1
+    orient_std: 0.01
+    lin_vel_std: 0.05
+    ang_vel_std: 0.05
 
 architecture:
   policy_net: [64, 64]
