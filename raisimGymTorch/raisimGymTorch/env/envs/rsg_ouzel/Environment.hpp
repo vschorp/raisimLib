@@ -69,8 +69,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
 
     // Add sensors
-    raisim_sensors::odometryNoise odometry_noise(sampling_time_, cfg["odometryNoise"]);
-    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, "ouzel", "ouzel/base_link", &odometry_noise);
+    auto* odometry_noise = new raisim_sensors::odometryNoise(sampling_time_, cfg["odometryNoise"]);
+    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, "ouzel", "ouzel/base_link", odometry_noise);
 
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
