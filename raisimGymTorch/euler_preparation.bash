@@ -22,6 +22,6 @@ cd /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch
 python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/setup.py develop              
 
 #run training script
-python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/raisimGymTorch/env/envs/rsg_ouzel/runner.py
+#python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/raisimGymTorch/env/envs/rsg_ouzel/runner.py
 
 # bsub -J "raisim-gym" -n 32 -R "rusage[mem=256]" -W 24:00 python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/raisimGymTorch/env/envs/rsg_ouzel/runner.py
