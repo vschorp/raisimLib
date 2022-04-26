@@ -134,7 +134,7 @@ class EvaluationVisualizer:
         diff_orient_W_all = body_orient_W_all.inv() * ref_orient_W_all
         diff_angles_W_all = diff_orient_W_all.magnitude()
         diff_angles_W_all_scaled = np.where(np.abs(diff_angles_W_all) < np.abs(diff_angles_W_all - np.pi), diff_angles_W_all, diff_angles_W_all - np.pi)
-        plt.plot(diff_angles_W_all_scaled, 'b-', label='angle_error_deg')
+        plt.plot(diff_angles_W_all_scaled, 'b-', label='angle_error_rad')
         # plt.plot(diff_angles_W_all_scaled / np.pi * 180.0, 'b-', label='angle_error_deg')
 
         plt.legend()
