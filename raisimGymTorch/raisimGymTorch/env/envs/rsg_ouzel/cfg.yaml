@@ -33,6 +33,11 @@ environment:
       angleErrorDeg: 3.0
       linearVel: 0.01
       angularVelDeg: 1.0
+  initialisation:
+    distanceOffset: 1.5
+    angleOffsetDeg: 45.0
+    linearVel: 0.1
+    angularVelDeg: 5.0
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0

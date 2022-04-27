@@ -65,6 +65,12 @@ class ENVIRONMENT : public RaisimGymEnv {
     actionMean_ = gc_init_.tail(actionDim_);
     actionStd_.setConstant(0.3);
 
+    // Initialisation Parameters
+    initialDistanceOffset_ = cfg["initialisation"]["distanceOffset"].template As<float>();
+    initialAngularOffset_ = cfg["initialisation"]["angleOffsetDeg"].template As<float>() / 180.0 * M_PI;
+    initialLinearVel_ = cfg["initialisation"]["linearVel"].template As<float>();
+    initialAngularVel_ = cfg["initialisation"]["angularVelDeg"].template As<float>() / 180.0 * M_PI;
+
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
     terminalOOBRewardCoeff_ = cfg["termination"]["oob"]["reward"].template As<float>();
@@ -126,7 +132,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     orig.setZero();
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
       // apply wrench on ouzel
-      // TODO: check body index and wrench command frame
       ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
       ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
 
@@ -154,7 +159,6 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   void updateObservation() {
-    // TODO add observations from sensor
     odometry_.update();
     Eigen::VectorXd odometry_measurement = odometry_.getMeas();
     position_W_ = odometry_measurement.segment(0, 3);
@@ -163,6 +167,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     bodyAngularVel_ = odometry_measurement.segment(10, 3);
 
     ouzel_->getState(gc_, gv_);
+    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
+    std::cout << "odometry_measurement_gt: " << odometry_.getMeasGT() << std::endl;
 //    raisim::Vec<4> quat;
 //    raisim::Mat<3,3> rot;
 //    quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
@@ -203,7 +209,6 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   bool isTerminalState(float& terminalReward) final {
-
     double waypoint_dist, error_angle;
     computeErrorMetrics(waypoint_dist, error_angle);
     Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
@@ -237,21 +242,32 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     init_orientation.normalize();
-    double init_angle = unifDistPlusMinusOne_(gen_) * 2.0 * M_PI;
+    double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
     Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
     init_quaternion.normalize();
+
+    Eigen::Vector3d init_lin_vel_dir(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    Eigen::Vector3d init_lin_vel = init_lin_vel_dir.normalized() * initialLinearVel_ * unifDistPlusMinusOne_(gen_);
+
+    Eigen::Vector3d init_ang_vel_axis(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    Eigen::Vector3d init_ang_vel = init_ang_vel_axis.normalized() * initialAngularVel_ * unifDistPlusMinusOne_(gen_);
+
+    std::cout << "init lin vel: " << init_lin_vel << std::endl;
+    std::cout << "init ang vel: " << init_ang_vel << std::endl;
+
     gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
             init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+            init_lin_vel.x(), init_lin_vel.y(), init_lin_vel.z(), init_ang_vel.x(), init_ang_vel.y(), init_ang_vel.z(),
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     // reset reference
     Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_position.normalize();
-    ref_position_ = init_position + 1.5 * unifDistPlusMinusOne_(gen_) * ref_delta_position;
+    ref_position_ = init_position + initialAngularOffset_ * unifDistPlusMinusOne_(gen_) * ref_delta_position;
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_orientation.normalize();
-    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * 45.0 / 180.0 * M_PI;
+    double ref_delta_angle = unifDistPlusMinusOne_(gen_) * initialAngularOffset_;
 //    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
 //    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
     Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
@@ -296,6 +312,10 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool visualizable_ = false;
   raisim::ArticulatedSystem* ouzel_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, pTarget_, pTarget12_, vTarget_;
+  double initialDistanceOffset_;
+  double initialAngularOffset_;
+  double initialLinearVel_;
+  double initialAngularVel_;
   float terminalOOBRewardCoeff_;
   float terminalSuccessRewardCoeff_;
   double terminalOOBWaypointDist_;
