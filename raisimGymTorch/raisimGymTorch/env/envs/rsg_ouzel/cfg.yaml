@@ -19,9 +19,20 @@ environment:
     orientError:
       coeff: -1.0
     linearRefCorr:
-      coeff: -1.0e-2
+      coeff: -1.0e-1
     orientRefCorr:
-      coeff: -1.0e-2
+      coeff: -1.0e-1
+  termination:
+    oob:
+      reward: -10.0
+      waypointDist: 5.0
+      angleErrorDeg: 60.0
+    success:
+      reward: 10.0
+      waypointDist: 0.05
+      angleErrorDeg: 3.0
+      linearVel: 0.01
+      angularVelDeg: 1.0
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0
@@ -80,10 +91,10 @@ environment:
     linkName: ouzel/base_link
     childFrameId: ouzel
   odometryNoise:
-    pos_std: 0.01
-    orient_std: 0.001
-    lin_vel_std: 0.005
-    ang_vel_std: 0.005
+    pos_std: 1.0e-4
+    orient_std: 1.0e-4
+    lin_vel_std: 5.0e-3
+    ang_vel_std: 5.0e-3
 
 architecture:
   policy_net: [64, 64]

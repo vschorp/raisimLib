@@ -67,6 +67,14 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
+    terminalOOBRewardCoeff_ = cfg["termination"]["oob"]["reward"].template As<float>();
+    terminalOOBWaypointDist_ = cfg["termination"]["oob"]["waypointDist"].template As<float>();
+    terminalOOBAngleError_ = cfg["termination"]["oob"]["angleErrorDeg"].template As<float>() / 180.0 * M_PI;
+    terminalSuccessRewardCoeff_ = cfg["termination"]["success"]["reward"].template As<float>();
+    terminalSuccessWaypointDist_ = cfg["termination"]["success"]["waypointDist"].template As<float>();
+    terminalSuccessAngleError_ = cfg["termination"]["success"]["angleErrorDeg"].template As<float>() / 180.0 * M_PI;
+    terminalSuccessLinearVel_ = cfg["termination"]["success"]["linearVel"].template As<float>();
+    terminalSuccessAngularVel_ = cfg["termination"]["success"]["angularVelDeg"].template As<float>() / 180.0 * M_PI;
 
     // Add sensors
     auto* odometry_noise = new raisim_sensors::odometryNoise(sampling_time_, cfg["odometryNoise"]);
@@ -195,15 +203,26 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   bool isTerminalState(float& terminalReward) final {
-    terminalReward = float(terminalRewardCoeff_);
 
     double waypoint_dist, error_angle;
     computeErrorMetrics(waypoint_dist, error_angle);
-    if( waypoint_dist > terminalWaypointDist || error_angle > terminalAngleError)
-      return true;
+    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
+    Eigen::Vector3d lin_vel_gt = odometry_measurement_gt.segment(7, 3);
+    Eigen::Vector3d ang_vel_gt = odometry_measurement_gt.segment(10, 3);
 
-    terminalReward = 0.f;
-    return false;
+    if(waypoint_dist > terminalOOBWaypointDist_ || error_angle > terminalOOBAngleError_) {
+      terminalReward = terminalOOBRewardCoeff_;
+      return true;
+    }
+    else if (waypoint_dist < terminalSuccessWaypointDist_ && error_angle < terminalSuccessAngleError_
+             && lin_vel_gt.norm() < terminalSuccessLinearVel_ && ang_vel_gt.norm() < terminalSuccessAngularVel_) {
+      terminalReward = terminalSuccessRewardCoeff_;
+      return true;
+    }
+    else {
+      terminalReward = 0.f;
+      return false;
+    }
   }
 
   void curriculumUpdate() { };
@@ -277,9 +296,14 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool visualizable_ = false;
   raisim::ArticulatedSystem* ouzel_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, pTarget_, pTarget12_, vTarget_;
-  double terminalRewardCoeff_ = -10.;
-  double terminalWaypointDist = 5.0;
-  double terminalAngleError = 60.0 / 180.0 * M_PI;
+  float terminalOOBRewardCoeff_;
+  float terminalSuccessRewardCoeff_;
+  double terminalOOBWaypointDist_;
+  double terminalOOBAngleError_;
+  double terminalSuccessWaypointDist_;
+  double terminalSuccessAngleError_;
+  double terminalSuccessLinearVel_;
+  double terminalSuccessAngularVel_;
   Eigen::VectorXd actionMean_, actionStd_;
 //  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_;
