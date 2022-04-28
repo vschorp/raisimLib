@@ -18,6 +18,7 @@ conda activate raisim-gym
 
 #rebuild env
 rm -rf /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/build
+rm /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/raisimGymTorch/env/bin/rsg_*
 cd /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch
 python /cluster/home/vschorp/raisim_workspace/raisimLib/raisimGymTorch/setup.py develop              
 
