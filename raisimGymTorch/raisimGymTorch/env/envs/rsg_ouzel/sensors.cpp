@@ -148,19 +148,21 @@ namespace raisim_sensors {
   
   void odometry::update() {
     raisim::Vec<3> point_W, velocity_W, velocity_B, angularVelocity_W, angularVelocity_B;
-    raisim::Vec<4> orient_W;
+    raisim::Vec<4> orient_W_wrong_order;
     raisim::Mat<3, 3>  orientMat;
 
-    robot_->getFramePosition(baseLink_, point_W);
-    robot_->getFrameOrientation(baseLink_, orientMat);
-    raisim::rotMatToQuat(orientMat,orient_W);
+    robot_->getPosition(baseLink_, Eigen::Vector3d(0,0,0), point_W);
+    robot_->getBaseOrientation(orientMat);
+    raisim::rotMatToQuat(orientMat,orient_W_wrong_order);
+    // raisim quat as (w, x, y, z) to eigen quat with (x, y, z, w)
+    Eigen::Vector4d orient_W(orient_W_wrong_order[1], orient_W_wrong_order[2], orient_W_wrong_order[3], orient_W_wrong_order[0]);
     robot_->getFrameVelocity(baseLink_, velocity_W);
     robot_->getFrameAngularVelocity(baseLink_, angularVelocity_W);
 
-    velocity_B = orientMat.e().transpose()*velocity_W.e();
-    angularVelocity_B = orientMat.e().transpose()*angularVelocity_W.e();
+    velocity_B = orientMat.transpose() * velocity_W;
+    angularVelocity_B = orientMat.transpose() * angularVelocity_W;
   
-    measureGT_ << point_W.e(), orient_W.e(), velocity_B.e(), angularVelocity_B.e();
+    measureGT_ << point_W.e(), orient_W, velocity_B.e(), angularVelocity_B.e();
 
     if(noiseSource_!=NULL) {
       measure_ = measureGT_ + noiseSource_->getNoise();

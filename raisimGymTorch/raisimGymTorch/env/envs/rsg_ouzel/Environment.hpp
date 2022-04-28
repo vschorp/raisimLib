@@ -49,6 +49,12 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
     sampling_time_ = cfg["control_dt"].template As<float>();
 
+    /// Initialisation Parameters
+    initialDistanceOffset_ = cfg["initialisation"]["distanceOffset"].template As<float>();
+    initialAngularOffset_ = cfg["initialisation"]["angleOffsetDeg"].template As<float>() / 180.0 * M_PI;
+    initialLinearVel_ = cfg["initialisation"]["linearVel"].template As<float>();
+    initialAngularVel_ = cfg["initialisation"]["angularVelDeg"].template As<float>() / 180.0 * M_PI;
+
     resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
@@ -64,12 +70,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// action scaling
     actionMean_ = gc_init_.tail(actionDim_);
     actionStd_.setConstant(0.3);
-
-    // Initialisation Parameters
-    initialDistanceOffset_ = cfg["initialisation"]["distanceOffset"].template As<float>();
-    initialAngularOffset_ = cfg["initialisation"]["angleOffsetDeg"].template As<float>() / 180.0 * M_PI;
-    initialLinearVel_ = cfg["initialisation"]["linearVel"].template As<float>();
-    initialAngularVel_ = cfg["initialisation"]["angularVelDeg"].template As<float>() / 180.0 * M_PI;
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
@@ -167,24 +167,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     bodyAngularVel_ = odometry_measurement.segment(10, 3);
 
     ouzel_->getState(gc_, gv_);
-    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
-    std::cout << "odometry_measurement_gt: " << odometry_.getMeasGT() << std::endl;
-//    raisim::Vec<4> quat;
-//    raisim::Mat<3,3> rot;
-//    quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
-//    raisim::quatToRotMat(quat, rot);
-//    bodyLinearVel_ = rot.e().transpose() * gv_.segment(0, 3);
-//    bodyAngularVel_ = rot.e().transpose() * gv_.segment(3, 3);
 
-//    obDouble_ << gc_.segment(0,3), /// body position
-//        rot.e().col(0), rot.e().col(1), rot.e().col(2), /// body orientation
-//        bodyLinearVel_, bodyAngularVel_, /// body linear&angular velocity
-//        ref_position_, /// ref position
-//        ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2); /// ref orientation
-//    std::cout << "ob quat:\n" << quat << std::endl;
-//    std::cout << "observation:\n" << obDouble_ << std::endl;
-//    std::cout << "lin vel:\n" << bodyLinearVel_ << std::endl;
-//    std::cout << "ang vel:\n" << bodyAngularVel_ << std::endl;
     if (!Eigen::isfinite(gc_.array()).any()) {
       std::cout << "ob is nan!!" << std::endl;
       std::cout << "odometry : " << odometry_measurement << std::endl;
@@ -239,26 +222,32 @@ class ENVIRONMENT : public RaisimGymEnv {
  private:
   void resetInitialConditions() {
     Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+    position_W_ = init_position;
 
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     init_orientation.normalize();
     double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
     Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
     init_quaternion.normalize();
+    orientation_W_B_ = init_quaternion;
 
     Eigen::Vector3d init_lin_vel_dir(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     Eigen::Vector3d init_lin_vel = init_lin_vel_dir.normalized() * initialLinearVel_ * unifDistPlusMinusOne_(gen_);
+    bodyLinearVel_ = init_lin_vel;
+    Eigen::Vector3d init_lin_vel_W = orientation_W_B_.toRotationMatrix() * init_lin_vel;
 
     Eigen::Vector3d init_ang_vel_axis(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     Eigen::Vector3d init_ang_vel = init_ang_vel_axis.normalized() * initialAngularVel_ * unifDistPlusMinusOne_(gen_);
-
-    std::cout << "init lin vel: " << init_lin_vel << std::endl;
-    std::cout << "init ang vel: " << init_ang_vel << std::endl;
+    bodyAngularVel_ = init_ang_vel;
+    Eigen::Vector3d init_ang_vel_W = orientation_W_B_.toRotationMatrix() * init_ang_vel;
 
     gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
             init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
-            init_lin_vel.x(), init_lin_vel.y(), init_lin_vel.z(), init_ang_vel.x(), init_ang_vel.y(), init_ang_vel.z(),
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+    gv_init_ << init_lin_vel_W.x(), init_lin_vel_W.y(), init_lin_vel_W.z(),
+                init_ang_vel_W.x(), init_ang_vel_W.y(), init_ang_vel_W.z(),
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     // reset reference
     Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
