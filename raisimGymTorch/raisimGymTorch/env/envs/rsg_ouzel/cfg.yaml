@@ -54,7 +54,7 @@ environment:
     ang_d_gain: 12.0
     pos_err_max: 0.0
     max_linear_accel: 7.0
-    max_angular_accel: 1.5 #50
+    max_angular_accel: 10 #1.5 50
     position_integrator_limit: 1.0
     attitude_integrator_limit: 1.0
     tool_virtual_mass: 1.0
