@@ -29,6 +29,7 @@ weight_path = args.weight
 
 # check if gpu is available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"using device {device}!")
 
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
@@ -71,6 +72,7 @@ saver = ConfigurationSaver(log_dir=home_path + "/raisimGymTorch/data/"+task_name
                            save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp"])
 # tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
 
+learning_rate_schedule = 'adaptive' if cfg['use_adaptive_lr'] else 'constant'
 ppo = PPO.PPO(actor=actor,
               critic=critic,
               num_envs=cfg['environment']['num_envs'],
@@ -82,8 +84,8 @@ ppo = PPO.PPO(actor=actor,
               device=device,
               log_dir=saver.data_dir,
               shuffle_batch=False,
-              learning_rate_schedule='constant',
-              learning_rate=5e-4
+              learning_rate_schedule=learning_rate_schedule,
+              learning_rate=cfg['learning_rate']
               )
 
 on_cluster = cfg["on_cluster"]

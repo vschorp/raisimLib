@@ -2,6 +2,8 @@ seed: 1
 record_video: yes
 activation: tanh
 on_cluster: True
+learning_rate: 5e-4
+use_adaptive_lr: True
 
 environment:
   render: True
@@ -12,7 +14,6 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.01
   max_time: 4.0
-  test: 3.0
   reward:
     waypointDist:
       coeff: -1.0
