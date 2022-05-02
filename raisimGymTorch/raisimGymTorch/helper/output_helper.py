@@ -16,6 +16,7 @@ class EvaluationVisualizer:
         self.body_angular_vel_W_all = np.zeros([max_steps, 3])
         self.ref_pos_W_all = np.zeros([max_steps, 3])
         self.ref_orient_quat_W_all = np.zeros([max_steps, 4])
+        self.error_angle = np.zeros([max_steps, 1])
 
         self.action_lin_corr_all = np.zeros([max_steps, 3])
         self.action_orient_corr_all = np.zeros([max_steps, 4])
@@ -46,12 +47,18 @@ class EvaluationVisualizer:
         ref_orient_mat_W = np.vstack([obs_orig[0][21:24], obs_orig[0][24:27], obs_orig[0][27:30]]).transpose()
         ref_orient_W = Rotation.from_matrix(ref_orient_mat_W)
 
+        error_rotation = body_orient_W.inv() * ref_orient_W
+        # orient_error_mat = np.linalg.inv(body_orient_mat_W) * ref_orient_mat_W
+        # error_angle_raw = Rotation.from_matrix(orient_error_mat).magnitude()
+        # error_angle = error_angle_raw if error_angle_raw < np.pi / 2.0 else error_angle_raw - np.pi
+
         self.body_pos_W_all[step, :] = body_pos_W
         self.body_orient_quat_W_all[step, :] = body_orient_W.as_quat()
         self.body_linear_vel_W_all[step, :] = body_linear_vel_W
         self.body_angular_vel_W_all[step, :] = body_angular_vel_W
         self.ref_pos_W_all[step, :] = ref_pos_W
         self.ref_orient_quat_W_all[step, :] = ref_orient_W.as_quat()
+        self.error_angle[step, :] = error_rotation.magnitude()
 
     def parse_action(self, action_ll: torch.Tensor, step):
         action_np = action_ll.detach().numpy()[0]
@@ -96,18 +103,28 @@ class EvaluationVisualizer:
         action_orient_corr_all_rot = Rotation.from_quat(self.action_orient_corr_all)
         corr_ref_W_all_rot = ref_orient_W_all_rot * action_orient_corr_all_rot
         corr_ref_W_all_euler = corr_ref_W_all_rot.as_euler("xyz")
+        corr_ref_W_all_quat = corr_ref_W_all_rot.as_quat()
         plt.figure(figsize=[20, 10])
         plt.plot(body_orient_euler_W_all[:, 0], 'r-', label='body_orient_euler_W_all_x')
         plt.plot(body_orient_euler_W_all[:, 1], 'g-', label='body_orient_euler_W_all_y')
         plt.plot(body_orient_euler_W_all[:, 2], 'b-', label='body_orient_euler_W_all_z')
+        # plt.plot(self.body_orient_quat_W_all[:, 0], 'r-', label='body_orient_quat_W_all_x')
+        # plt.plot(self.body_orient_quat_W_all[:, 1], 'g-', label='body_orient_quat_W_all_y')
+        # plt.plot(self.body_orient_quat_W_all[:, 2], 'b-', label='body_orient_quat_W_all_z')
         # plt.plot(self.body_orient_quat_W_all[:, 3], 'm-', label='body_orient_quat_W_all_w')
         plt.plot(ref_orient_euler_W_all[:, 0], 'r--', label='ref_orient_euler_W_all_x')
         plt.plot(ref_orient_euler_W_all[:, 1], 'g--', label='ref_orient_euler_W_all_y')
         plt.plot(ref_orient_euler_W_all[:, 2], 'b--', label='ref_orient_euler_W_all_z')
+        # plt.plot(self.ref_orient_quat_W_all[:, 0], 'r--', label='ref_orient_quat_W_all_x')
+        # plt.plot(self.ref_orient_quat_W_all[:, 1], 'g--', label='ref_orient_quat_W_all_y')
+        # plt.plot(self.ref_orient_quat_W_all[:, 2], 'b--', label='ref_orient_quat_W_all_z')
         # plt.plot(self.ref_orient_quat_W_all[:, 3], 'm--', label='ref_orient_quat_W_all_w')
         plt.plot(corr_ref_W_all_euler[:, 0], 'r*', label='ref_orient_corr_euler_W_all_x')
         plt.plot(corr_ref_W_all_euler[:, 1], 'g*', label='ref_orient_corr_euler_W_all_y')
         plt.plot(corr_ref_W_all_euler[:, 2], 'b*', label='ref_orient_corr_euler_W_all_z')
+        # plt.plot(corr_ref_W_all_quat[:, 0], 'r*', label='ref_orient_corr_quat_W_all_r')
+        # plt.plot(corr_ref_W_all_quat[:, 1], 'g*', label='ref_orient_corr_quat_W_all_g')
+        # plt.plot(corr_ref_W_all_quat[:, 2], 'b*', label='ref_orient_corr_quat_W_all_b')
         # plt.plot(corr_ref_W_all_quat[:, 3], 'm*', label='ref_orient_corr_quat_W_all_w')
         plt.legend()
         plt.savefig(self.save_path + "orient.png")
@@ -133,12 +150,13 @@ class EvaluationVisualizer:
         plt.plot(np.linalg.norm(self.body_pos_W_all - self.ref_pos_W_all, axis=1), 'r-', label='pos_W_error')
         #TODO: fix angle error plot
 
-        body_orient_W_all = Rotation.from_quat(self.body_orient_quat_W_all)
-        ref_orient_W_all = Rotation.from_quat(self.ref_orient_quat_W_all)
-        diff_orient_W_all = body_orient_W_all.inv() * ref_orient_W_all
-        diff_angles_W_all = diff_orient_W_all.magnitude()
-        diff_angles_W_all_scaled = np.where(np.abs(diff_angles_W_all) < np.abs(diff_angles_W_all - np.pi), diff_angles_W_all, diff_angles_W_all - np.pi)
-        plt.plot(diff_angles_W_all_scaled, 'b-', label='angle_error_rad')
+        # body_orient_W_all = Rotation.from_quat(self.body_orient_quat_W_all)
+        # ref_orient_W_all = Rotation.from_quat(self.ref_orient_quat_W_all)
+        # diff_orient_W_all = body_orient_W_all * ref_orient_W_all.inv()
+        # diff_angles_W_all = 2.0 * np.arctan2(np.linalg.norm(diff_orient_W_all.as_quat(), axis=1),  diff_orient_W_all.as_quat()[:, 3])
+        # diff_angles_W_all = diff_orient_W_all.magnitude()
+        # diff_angles_W_all_scaled = np.where(np.abs(diff_angles_W_all) < np.abs(diff_angles_W_all - np.pi), diff_angles_W_all, diff_angles_W_all - np.pi)
+        plt.plot(self.error_angle, 'b-', label='angle_error_rad')
         # plt.plot(diff_angles_W_all_scaled / np.pi * 180.0, 'b-', label='angle_error_deg')
 
         plt.legend()

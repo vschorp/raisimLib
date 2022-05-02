@@ -164,7 +164,7 @@ class VectorizedEnvironment {
       obCount_ = totCount;
     }
 
-#pragma omp parallel for schedule(auto)
+    #pragma omp parallel for schedule(auto)
     for(int i=0; i<num_envs_; i++)
       ob.row(i) = (ob.row(i) - obMean_.transpose()).template cwiseQuotient<>((obVar_ + epsilon).cwiseSqrt().transpose());
   }

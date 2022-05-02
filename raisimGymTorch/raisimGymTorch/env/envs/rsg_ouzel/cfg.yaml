@@ -8,9 +8,9 @@ use_adaptive_lr: True
 environment:
   render: True
 # just testing commenting
-  num_envs: 26 #100
+  num_envs: 1 #26
   eval_every_n: 1000 #200
-  num_threads: 30 #30
+  num_threads: 1 #30
   simulation_dt: 0.0025
   control_dt: 0.01
   max_time: 4.0
@@ -35,10 +35,10 @@ environment:
       linearVel: 0.01
       angularVelDeg: 1.0
   initialisation:
-    distanceOffset: 1.5
-    angleOffsetDeg: 45.0
-    linearVel: 0.1
-    angularVelDeg: 5.0
+    distanceOffset: 1.5 #1.5
+    angleOffsetDeg: 45.0 #45.0
+    linearVel: 0.2 #0.1
+    angularVelDeg: 5.0 #5.0
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0
@@ -55,7 +55,7 @@ environment:
     ang_d_gain: 12.0
     pos_err_max: 0.0
     max_linear_accel: 7.0
-    max_angular_accel: 10 #1.5 50
+    max_angular_accel: 50 #1.5 50
     position_integrator_limit: 1.0
     attitude_integrator_limit: 1.0
     tool_virtual_mass: 1.0
@@ -97,10 +97,10 @@ environment:
     linkName: ouzel/base_link
     childFrameId: ouzel
   odometryNoise:
-    pos_std: 1.0e-4
-    orient_std: 1.0e-4
-    lin_vel_std: 5.0e-3
-    ang_vel_std: 5.0e-3
+    pos_std: 1.0e-4 #1.0e-1
+    orient_std: 1.0e-4 #1.0e-1
+    lin_vel_std: 5.0e-3 #5.0e-1
+    ang_vel_std: 5.0e-3 #5.0e-1
 
 architecture:
   policy_net: [64, 64]

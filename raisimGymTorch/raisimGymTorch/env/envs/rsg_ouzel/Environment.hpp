@@ -115,25 +115,43 @@ class ENVIRONMENT : public RaisimGymEnv {
   float step(const Eigen::Ref<EigenVec>& action) final {
     // give adapted waypoint to controller -> get wrench
 //    std::cout << "action: " << action << std::endl;
+//    controller_.setOdom(position_W_gt_, orientation_W_B_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_);
     controller_.setOdom(position_W_, orientation_W_B_, bodyLinearVel_, bodyAngularVel_);
+
+//    std::cout << "ref pos: " << ref_position_ << std::endl;
+//    std::cout << "ref orient coeffs: " << ref_orientation_.coeffs() << std::endl;
+//    double waypoint_distw, error_anglew;
+//    computeErrorMetrics(waypoint_distw, error_anglew);
+//    std::cout << "waypoint dist before action: " << waypoint_distw << std::endl;
+//    std::cout << "angle error deg before action: " << error_anglew / M_PI * 180 << std::endl;
 
     auto actionD = action.cast<double>();
     Eigen::Vector3d ref_position_corr_vec = actionD.segment(0, 3);
     Eigen::Quaterniond ref_orientation_corr = QuaternionFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
 //    std::cout << "action ref pos: " << ref_position_corr_vec << std::endl;
-//    std::cout << "action ref orient: " << ref_orientation_corr.coeffs() << std::endl;
+//    std::cout << "action ref orient coeffs: " << ref_orientation_corr.coeffs() << std::endl;
     controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr);
 
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
-//    std::cout << "commanded thrust:\n" << wrench_command.thrust << "commanded torque:\n" << wrench_command.torque << std::endl;
+//    std::cout << "commanded thrust:\n" << wrench_command.thrust << "\n" << "commanded torque:\n" << wrench_command.torque << std::endl;
 
+//    std::cout << "base link idx: " << ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
     Vec<3> orig;
     orig.setZero();
+//    Eigen::Vector3d levitation_force_W(0, 0, ouzel_->getTotalMass() * 9.81);
+//    Eigen::Vector3d levitation_force_B = orientation_W_B_gt_.inverse().toRotationMatrix() * levitation_force_W;
+//    Eigen::Vector3d test_torque_W(0, 0, 0.1);
+//    Eigen::Vector3d test_torque_B = orientation_W_B_gt_.inverse().toRotationMatrix() * test_torque_W;
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
       // apply wrench on ouzel
-      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
+      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
       ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
+//      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
+//      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->WORLD_FRAME, levitation_force_W, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
+//      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, levitation_force_B, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
+//      ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), test_torque_B);
+//      ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
 
       if(server_) server_->lockVisualizationServerMutex();
       world_->integrate();
@@ -146,7 +164,10 @@ class ENVIRONMENT : public RaisimGymEnv {
     double waypoint_dist, error_angle;
     computeErrorMetrics(waypoint_dist, error_angle);
     Eigen::AngleAxisd ref_orientation_corr_angle_axis(ref_orientation_corr);
+//    std::cout << "waypoint dist: " << waypoint_dist << std::endl;
+//    std::cout << "angle error deg: " << error_angle / M_PI * 180 << std::endl;
 //    std::cout << "angle error: " << error_angle << std::endl;
+//    std::cout << "ref orient corr angle: " << float(ref_orientation_corr_angle_axis.angle()) << std::endl;
     rewards_.record("waypointDist", float(waypoint_dist));
     rewards_.record("orientError", float(error_angle));
     rewards_.record("linearRefCorr", float(ref_position_corr_vec.squaredNorm()));
@@ -162,13 +183,28 @@ class ENVIRONMENT : public RaisimGymEnv {
     odometry_.update();
     Eigen::VectorXd odometry_measurement = odometry_.getMeas();
     position_W_ = odometry_measurement.segment(0, 3);
-    orientation_W_B_ = Eigen::Quaterniond(odometry_measurement(3), odometry_measurement(4), odometry_measurement(5), odometry_measurement(6));
+    orientation_W_B_ = Eigen::Quaterniond(odometry_measurement(3), odometry_measurement(4), odometry_measurement(5), odometry_measurement(6)).normalized();
     bodyLinearVel_ = odometry_measurement.segment(7, 3);
     bodyAngularVel_ = odometry_measurement.segment(10, 3);
 
+    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeas();
+    position_W_gt_ = odometry_measurement_gt.segment(0, 3);
+    orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6)).normalized();
+    bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
+    bodyAngularVel_gt_ = odometry_measurement_gt.segment(10, 3);
+
     ouzel_->getState(gc_, gv_);
 
-    if (!Eigen::isfinite(gc_.array()).any()) {
+//    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
+//    std::cout << "position W: " << position_W_ << std::endl;
+//    std::cout << "orientation_W_B_ coeffs: " << orientation_W_B_.coeffs() << std::endl;
+//    std::cout << "bodyLinearVel_: " << bodyLinearVel_ << std::endl;
+//    std::cout << "bodyAngularVel_: " << bodyAngularVel_ << std::endl;
+
+//    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
+//    std::cout << "odometry_measurement gt: " << odometry_measurement_gt << std::endl;
+
+    if (!Eigen::isfinite(gc_.array()).all()) {
       std::cout << "ob is nan!!" << std::endl;
       std::cout << "odometry : " << odometry_measurement << std::endl;
       std::cout << "gc : " << gc_ << std::endl;
@@ -184,11 +220,16 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    Eigen::Matrix3f rot_mat = quat.toRotationMatrix();
 //    ob << ob.segment(0, 3), rot_mat.col(0), rot_mat.col(1), rot_mat.col(2), obFloat.segment(7, 6);
     Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
+    Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix();
     Eigen::VectorXd ob_double(obDim_);
     ob_double << position_W_, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
                  bodyLinearVel_, bodyAngularVel_,
-                 ref_position_, ref_orientation_.col(0), ref_orientation_.col(1), ref_orientation_.col(2);
+                 ref_position_, ref_orientation_mat.col(0), ref_orientation_mat.col(1), ref_orientation_mat.col(2);
     ob = ob_double.cast<float>();
+//    std::cout << "orientation_W_B_ coeffs: \n" << orientation_W_B_.coeffs() << std::endl;
+//    std::cout << "orientation_W_B_mat: \n" << orientation_W_B_mat << std::endl;
+//    std::cout << "orientation_W_B_mat: " << orientation_W_B_mat << std::endl;
+//    std::cout << "ob: " << ob << std::endl;
   }
 
   bool isTerminalState(float& terminalReward) final {
@@ -200,11 +241,13 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     if(waypoint_dist > terminalOOBWaypointDist_ || error_angle > terminalOOBAngleError_) {
       terminalReward = terminalOOBRewardCoeff_;
+//      std::cout << "termination oob" << std::endl;
       return true;
     }
     else if (waypoint_dist < terminalSuccessWaypointDist_ && error_angle < terminalSuccessAngleError_
              && lin_vel_gt.norm() < terminalSuccessLinearVel_ && ang_vel_gt.norm() < terminalSuccessAngularVel_) {
       terminalReward = terminalSuccessRewardCoeff_;
+//      std::cout << "termination success" << std::endl;
       return true;
     }
     else {
@@ -229,17 +272,20 @@ class ENVIRONMENT : public RaisimGymEnv {
     double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
     Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
     init_quaternion.normalize();
+//    init_quaternion = Eigen::Quaterniond::Identity();
     orientation_W_B_ = init_quaternion;
 
     Eigen::Vector3d init_lin_vel_dir(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     Eigen::Vector3d init_lin_vel = init_lin_vel_dir.normalized() * initialLinearVel_ * unifDistPlusMinusOne_(gen_);
     bodyLinearVel_ = init_lin_vel;
     Eigen::Vector3d init_lin_vel_W = orientation_W_B_.toRotationMatrix() * init_lin_vel;
+//    std::cout << "init_lin_vel_W: " << init_lin_vel_W << std::endl;
 
     Eigen::Vector3d init_ang_vel_axis(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     Eigen::Vector3d init_ang_vel = init_ang_vel_axis.normalized() * initialAngularVel_ * unifDistPlusMinusOne_(gen_);
     bodyAngularVel_ = init_ang_vel;
     Eigen::Vector3d init_ang_vel_W = orientation_W_B_.toRotationMatrix() * init_ang_vel;
+//    std::cout << "init_ang_vel_W: " << init_ang_vel_W << std::endl;
 
     gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
             init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
@@ -252,7 +298,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     // reset reference
     Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_position.normalize();
-    ref_position_ = init_position + initialAngularOffset_ * unifDistPlusMinusOne_(gen_) * ref_delta_position;
+    ref_position_ = init_position + initialDistanceOffset_ * unifDistPlusMinusOne_(gen_) * ref_delta_position;
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_orientation.normalize();
@@ -263,9 +309,16 @@ class ENVIRONMENT : public RaisimGymEnv {
     ref_delta_quaternion.normalize();
     Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
     ref_quaternion.normalize();
+    ref_orientation_ = ref_quaternion;
 
-    ref_orientation_ = ref_quaternion.toRotationMatrix();
-    controller_.setRef(ref_position_, ref_quaternion);
+    controller_.setRef(ref_position_, ref_orientation_);
+//    std::cout << "ref_delta_angle deg: " << ref_delta_angle / M_PI * 180.0 << std::endl;
+//    std::cout << "init_quaternion coeffs: " << init_quaternion.coeffs() << std::endl;
+//    std::cout << "init orientation_W_B_ coeffs: " << orientation_W_B_.coeffs() << std::endl;
+//    std::cout << "ref_delta_quaternion coeffs: " << ref_delta_quaternion.coeffs() << std::endl;
+//    std::cout << "ref_quaternion coeffs: " << ref_quaternion.coeffs() << std::endl;
+//    double error_angle = ref_orientation_.angularDistance(init_quaternion);
+//    std::cout << "initial error angle: " << error_angle<< std::endl;
   }
 
   void computeErrorMetrics(double& waypointDist, double& errorAngle) {
@@ -276,9 +329,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
 //    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
     Eigen::Quaterniond orientation_W_B_gt(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6));
-    auto error_quat = Eigen::Quaterniond (ref_orientation_) * orientation_W_B_gt.inverse();
-    Eigen::AngleAxisd error_angle_axis(error_quat);
-    errorAngle = error_angle_axis.angle();
+    errorAngle = orientation_W_B_gt.angularDistance(ref_orientation_);
   }
 
   Eigen::Quaterniond QuaternionFromTwoVectors(Eigen::Vector3d _orientation_vec_1, Eigen::Vector3d _orientation_vec_2) {
@@ -317,10 +368,12 @@ class ENVIRONMENT : public RaisimGymEnv {
 //  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_;
   Eigen::Quaterniond orientation_W_B_;
+  Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
+  Eigen::Quaterniond orientation_W_B_gt_;
   std::set<size_t> footIndices_;
   double sampling_time_;
   Eigen::Vector3d ref_position_;
-  Eigen::Matrix3d ref_orientation_;
+  Eigen::Quaterniond ref_orientation_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 

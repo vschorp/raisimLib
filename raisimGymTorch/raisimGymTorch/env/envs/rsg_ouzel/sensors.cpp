@@ -81,6 +81,10 @@ namespace raisim_sensors {
     orient_std_ = cfg["orient_std"].template As<float>();
     lin_vel_std_ = cfg["lin_vel_std"].template As<float>();
     ang_vel_std_ = cfg["ang_vel_std"].template As<float>();
+//    std::cout << "pos_std_ noise: " << pos_std_ << std::endl;
+//    std::cout << "orient_std_ noise: " << orient_std_ << std::endl;
+//    std::cout << "lin_vel_std_ noise: " << lin_vel_std_ << std::endl;
+//    std::cout << "ang_vel_std_ noise: " << ang_vel_std_ << std::endl;
   }
 
   Eigen::VectorXd odometryNoise::getNoise() {
@@ -107,7 +111,7 @@ namespace raisim_sensors {
     orient_noise_quat.normalize();
 
     Eigen::VectorXd noise(13);
-    noise << pos_noise, orient_noise_quat.coeffs(), lin_vel_noise, ang_vel_noise;
+    noise << pos_noise, orient_noise_quat.w(), orient_noise_quat.x(), orient_noise_quat.y(), orient_noise_quat.z(), lin_vel_noise, ang_vel_noise;
     return noise;
   }
 
@@ -148,24 +152,42 @@ namespace raisim_sensors {
   
   void odometry::update() {
     raisim::Vec<3> point_W, velocity_W, velocity_B, angularVelocity_W, angularVelocity_B;
-    raisim::Vec<4> orient_W_wrong_order;
-    raisim::Mat<3, 3>  orientMat;
+    raisim::Vec<4> orient_W;
+    raisim::Mat<3, 3>  orientMatWB;
 
     robot_->getPosition(baseLink_, Eigen::Vector3d(0,0,0), point_W);
-    robot_->getBaseOrientation(orientMat);
-    raisim::rotMatToQuat(orientMat,orient_W_wrong_order);
-    // raisim quat as (w, x, y, z) to eigen quat with (x, y, z, w)
-    Eigen::Vector4d orient_W(orient_W_wrong_order[1], orient_W_wrong_order[2], orient_W_wrong_order[3], orient_W_wrong_order[0]);
+    robot_->getBaseOrientation(orientMatWB);
+    raisim::rotMatToQuat(orientMatWB,orient_W);
+
     robot_->getFrameVelocity(baseLink_, velocity_W);
     robot_->getFrameAngularVelocity(baseLink_, angularVelocity_W);
 
-    velocity_B = orientMat.transpose() * velocity_W;
-    angularVelocity_B = orientMat.transpose() * angularVelocity_W;
+    velocity_B = orientMatWB.transpose() * velocity_W;
+    angularVelocity_B = orientMatWB.transpose() * angularVelocity_W;
   
-    measureGT_ << point_W.e(), orient_W, velocity_B.e(), angularVelocity_B.e();
+    measureGT_ << point_W.e(), orient_W.e(), velocity_B.e(), angularVelocity_B.e();
+
+//    std::cout << "pos w sensor: " << point_W.e() << std::endl;
+//    std::cout << "orient mat sensor: " << orientMatWB << std::endl;
+//    std::cout << "orient quat sensor raisim: " << orient_W << std::endl;
+//    std::cout << "orient quat sensor eigen: " << orient_W.e() << std::endl;
+//    std::cout << "vel B sensor " << velocity_B.e() << std::endl;
+//    std::cout << "angular vel B sensor " << angularVelocity_B.e() << std::endl;
 
     if(noiseSource_!=NULL) {
-      measure_ = measureGT_ + noiseSource_->getNoise();
+      Eigen::VectorXd noise = noiseSource_->getNoise();
+      Eigen::Quaterniond orient_W_quat(orient_W[0], orient_W[1], orient_W[2], orient_W[3]);
+      Eigen::Quaterniond orient_noise_quat(noise[3], noise[4], noise[5], noise[6]);
+      Eigen::Quaterniond orient_W_quat_noisy = orient_W_quat * orient_noise_quat;
+      Eigen::Vector3d point_W_noisy = point_W.e() + noise.segment(0, 3);
+      Eigen::Vector3d velocity_B_noisy = velocity_B.e() + noise.segment(7, 3);
+      Eigen::Vector3d angularVelocity_B_noisy = angularVelocity_B.e() + noise.segment(10, 3);
+      measure_ << point_W_noisy, orient_W_quat_noisy.w(), orient_W_quat_noisy.x(), orient_W_quat_noisy.y(), orient_W_quat_noisy.z(),
+                  velocity_B_noisy, angularVelocity_B_noisy;
+//      std::cout << "orient noise quat sensor coeffs: " << orient_noise_quat.coeffs() << std::endl;
+//      std::cout << "orient W quat noisy sensor coeffs: " << orient_W_quat_noisy.coeffs() << std::endl;
+
+//      measure_ = measureGT_ + noiseSource_->getNoise();
     } else {
       measure_ = measureGT_;
     }
