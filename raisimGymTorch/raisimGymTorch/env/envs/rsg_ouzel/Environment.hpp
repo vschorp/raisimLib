@@ -42,6 +42,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     gcDim_ = ouzel_->getGeneralizedCoordinateDim();
     gvDim_ = ouzel_->getDOF();
     nJoints_ = gvDim_ - 6;
+//    std::cout << "gcDim_: " << gcDim_ << std::endl;
+//    std::cout << "gvDim_: " << gvDim_ << std::endl;
+//    std::cout << "nJoints_: " << nJoints_ << std::endl;
 
     /// initialize containers
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
