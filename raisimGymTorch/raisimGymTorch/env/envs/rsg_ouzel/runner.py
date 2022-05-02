@@ -23,6 +23,7 @@ task_name = "ouzel_only_planning"
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', help='set mode either train or test', type=str, default='train')
 parser.add_argument('-w', '--weight', help='pre-trained weight path', type=str, default='')
+parser.add_argument('-c', '--config', help='config file name', type=str, default='cfg.yaml')
 args = parser.parse_args()
 mode = args.mode
 weight_path = args.weight
@@ -36,7 +37,9 @@ task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../../.."
 
 # config
-cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
+config_fpath = os.path.join(task_path, args.config)
+print(f"loading config file {config_fpath}")
+cfg = YAML().load(open(config_fpath, 'r'))
 
 # create environment from the configuration file
 env = VecEnv(RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), normalize_ob=True)
