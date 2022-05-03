@@ -1,5 +1,5 @@
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymTorch.env.bin import rsg_ouzel
+from raisimGymTorch.env.bin import rsg_ouzel_delta
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymTorch.algo.ppo.module as ppo_module
 from raisimGymTorch.helper.output_helper import EvaluationVisualizer
@@ -14,6 +14,7 @@ import numpy as np
 # configuration
 parser = argparse.ArgumentParser()
 parser.add_argument('-w', '--weight', help='trained weight path', type=str, default='')
+parser.add_argument('-c', '--config', help='config file name', type=str, default='cfg.yaml')
 args = parser.parse_args()
 
 # directories
@@ -21,12 +22,14 @@ task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../../.."
 
 # config
-cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
+config_fpath = os.path.join(task_path, args.config)
+print(f"loading config file {config_fpath}")
+cfg = YAML().load(open(config_fpath, 'r'))
 
 # create environment from the configuration file
 cfg['environment']['num_envs'] = 1
 
-env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper))) # cfg['environment']
+env = VecEnv(rsg_ouzel_delta.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper))) # cfg['environment']
 # env = VecEnv(rsg_ouzel.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), normalize_ob=False) # cfg['environment']
 seed = int(time.time())
 print(f"the seed is {seed}")
