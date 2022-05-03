@@ -72,7 +72,7 @@ critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], acti
                            device)
 
 saver = ConfigurationSaver(log_dir=home_path + "/raisimGymTorch/data/"+task_name,
-                           save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp"])
+                           save_items=[config_fpath, task_path + "/Environment.hpp"])
 # tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
 
 learning_rate_schedule = 'adaptive' if cfg['use_adaptive_lr'] else 'constant'
