@@ -3,7 +3,7 @@ record_video: yes
 activation: tanh
 on_cluster: True
 learning_rate: 5e-4
-use_adaptive_lr: True
+use_adaptive_lr: False
 
 environment:
   render: True
@@ -25,11 +25,11 @@ environment:
       coeff: -1.0e-1
   termination:
     oob:
-      reward: -10.0
+      reward: -1000.0
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 10.0
+      reward: 100.0
       waypointDist: 0.05
       angleErrorDeg: 3.0
       linearVel: 0.01
