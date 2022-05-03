@@ -1,17 +1,19 @@
 seed: 1
 record_video: yes
 activation: tanh
+on_cluster: True
+learning_rate: 5e-4
+use_adaptive_lr: True
 
 environment:
   render: True
 # just testing commenting
-  num_envs: 100 #100
+  num_envs: 26 #26
   eval_every_n: 1000 #200
-  num_threads: 30 #30
+  num_threads: 1 #30
   simulation_dt: 0.0025
   control_dt: 0.01
   max_time: 4.0
-  test: 3.0
   reward:
     waypointDist:
       coeff: -1.0
@@ -21,6 +23,22 @@ environment:
       coeff: -1.0e-1
     orientRefCorr:
       coeff: -1.0e-1
+  termination:
+    oob:
+      reward: -10.0
+      waypointDist: 5.0
+      angleErrorDeg: 60.0
+    success:
+      reward: 10.0
+      waypointDist: 0.05
+      angleErrorDeg: 3.0
+      linearVel: 0.01
+      angularVelDeg: 1.0
+  initialisation:
+    distanceOffset: 1.5 #1.5
+    angleOffsetDeg: 45.0 #45.0
+    linearVel: 0.2 #0.1
+    angularVelDeg: 5.0 #5.0
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0
@@ -37,7 +55,7 @@ environment:
     ang_d_gain: 12.0
     pos_err_max: 0.0
     max_linear_accel: 7.0
-    max_angular_accel: 1.5 #50
+    max_angular_accel: 50 #1.5 50
     position_integrator_limit: 1.0
     attitude_integrator_limit: 1.0
     tool_virtual_mass: 1.0
@@ -64,6 +82,25 @@ environment:
         y: 0.0
         z: 0.015
       gravity: 9.81
+  imu:  # from mav_tools/mav_description/urdf/ouzel_base.xacro
+    accelerometerBiasCorrelationTime: 300.0
+    accelerometerTurnOnBiasSigma: 0.1960
+    accelerometerNoiseDensity: 0.004
+    accelerometerRandomWalk: 0.006
+    gyroscopeBiasCorrelationTime: 1000.0
+    gyroscopeTurnOnBiasSigma: 0.0087
+    gyroscopeNoiseDensity: 0.00005366563
+    gyroscopeRandomWalk: 0.000038785
+    linkName: ouzel/base_link
+    robotNamespace: ouzel
+  odometry:
+    linkName: ouzel/base_link
+    childFrameId: ouzel
+  odometryNoise:
+    pos_std: 1.0e-4 #1.0e-1
+    orient_std: 1.0e-4 #1.0e-1
+    lin_vel_std: 5.0e-3 #5.0e-1
+    ang_vel_std: 5.0e-3 #5.0e-1
 
 architecture:
   policy_net: [64, 64]

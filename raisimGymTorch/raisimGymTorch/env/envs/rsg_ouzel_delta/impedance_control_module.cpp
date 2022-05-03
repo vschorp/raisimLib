@@ -458,47 +458,30 @@ namespace rw_omav_controllers {
     }
 
     void ImpedanceControlModule::setOdom(const Eigen::Vector3d& _position,
-                                         const Eigen::VectorXd& _orientation,
+                                         const Eigen::Quaterniond & _orientation,
                                          const Eigen::Vector3d& _velocity_body,
                                          const Eigen::Vector3d& _angular_velocity) {
       odom_.position_W = _position;
-      Eigen:: Matrix3d rot_mat;
-      rot_mat.col(0) = _orientation.segment(0, 3);
-      rot_mat.col(1) = _orientation.segment(3, 3);
-      rot_mat.col(2) = _orientation.segment(6, 3);
-      if (!Eigen::isfinite(rot_mat.array()).any()) {
-        std::cout << "odom orientation is nan!!" << std::endl;
-      }
-
-      odom_.orientation_W_B = Eigen::Quaterniond(rot_mat);
+      odom_.orientation_W_B = _orientation;
       odom_.velocity_B = _velocity_body;
       odom_.angular_velocity_B = _angular_velocity;
     }
 
-    void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Matrix3d& _orientation_corr_mat) {
+    void ImpedanceControlModule::setRefFromAction(const Eigen::Vector3d& _position_corr, const Eigen::Quaterniond & _orientation_corr) {
       ref_.position_W = ref_position_;
-      if (_position_corr.norm() > 0) {
-//        Eigen::Vector3d position_corr_scaled = _position_corr / _position_corr.norm() * std::tanh(_position_corr.norm());
-//        ref_.position_W = ref_position_ + position_corr_scaled;
-        ref_.position_W += _position_corr;
-      }
+      ref_.position_W += _position_corr;
       if (!Eigen::isfinite(ref_.position_W.array()).any()) {
         std::cout << "ref position is nan!!" << std::endl;
       }
 
       ref_.orientation_W_B = ref_quaternion_;
-      if (!_orientation_corr_mat.isIdentity()) {
-//        Eigen::AngleAxisd corr_angle_axis(_orientation_corr_mat);
-//        double angle_scaled = std::tanh(corr_angle_axis.angle()) * 5.0 / 180.0 * M_PI; // Tuned
-//        Eigen::AngleAxisd corr_angle_axis_scaled(angle_scaled, corr_angle_axis.axis());
-//        Eigen::Quaterniond corr_quaternion_scaled(corr_angle_axis_scaled);
-//        ref_.orientation_W_B = ref_quaternion_ * corr_quaternion_scaled;
-        Eigen::Quaterniond orientation_corr_quat(_orientation_corr_mat);
-        ref_.orientation_W_B *= orientation_corr_quat;
-      }
+      ref_.orientation_W_B = ref_.orientation_W_B * _orientation_corr;
+//      ref_.orientation_W_B = _orientation_corr;
       if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
         std::cout << "ref orientation is nan!!" << std::endl;
       }
+//      std::cout << "corrected ref pos impedance ctrl: " << ref_.position_W << std::endl;
+//      std::cout << "corrected ref orient impedance ctrl coeffs: " << ref_.orientation_W_B.coeffs() << std::endl;
     }
 
     void ImpedanceControlModule::setRef(const Eigen::Vector3d& _position, const Eigen::Quaterniond& _orientation) {
@@ -507,6 +490,8 @@ namespace rw_omav_controllers {
 
       ref_.position_W = ref_position_;
       ref_.orientation_W_B = ref_quaternion_;
+//      ref_.position_W = Eigen::Vector3d::Zero();
+//      ref_.orientation_W_B = Eigen::Quaterniond::Identity();
     }
 
 }  // namespace rw_omav_controllers
