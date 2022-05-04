@@ -61,10 +61,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 30;
+    obDim_ = 27;
     actionDim_ =  9;
     actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
-//    obDouble_.setZero(obDim_);
     position_W_.setZero();
     orientation_W_B_.setIdentity();
     bodyLinearVel_.setZero();
@@ -265,16 +264,13 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     /// convert it to float
-//    Eigen::VectorXf obFloat = obDouble_.cast<float>();
-//    Eigen::Quaternionf quat(obFloat.segment(3, 4));
-//    Eigen::Matrix3f rot_mat = quat.toRotationMatrix();
-//    ob << ob.segment(0, 3), rot_mat.col(0), rot_mat.col(1), rot_mat.col(2), obFloat.segment(7, 6);
+    Eigen::Vector3d position_CR_W = ref_position_ - position_W_;//CR for current to reference
     Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
     Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix();
     Eigen::VectorXd ob_double(obDim_);
-    ob_double << position_W_, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
+    ob_double << position_CR_W, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
                  bodyLinearVel_, bodyAngularVel_,
-                 ref_position_, ref_orientation_mat.col(0), ref_orientation_mat.col(1), ref_orientation_mat.col(2);
+                 ref_orientation_mat.col(0), ref_orientation_mat.col(1), ref_orientation_mat.col(2);
     ob = ob_double.cast<float>();
 //    std::cout << "orientation_W_B_ coeffs: \n" << orientation_W_B_.coeffs() << std::endl;
 //    std::cout << "orientation_W_B_mat: \n" << orientation_W_B_mat << std::endl;
@@ -337,8 +333,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     Eigen::Vector3d init_ang_vel_W = orientation_W_B_.toRotationMatrix() * init_ang_vel;
 //    std::cout << "init_ang_vel_W: " << init_ang_vel_W << std::endl;
 
-    gc_init_ << init_position.x(), init_position.y(), init_position.z(), // position
-            init_quaternion.w(), init_quaternion.x(), init_quaternion.y(), init_quaternion.z(), //orientation quaternion
+    gc_init_ << position_W_.x(), position_W_.y(), position_W_.z(), // position
+            orientation_W_B_.w(), orientation_W_B_.x(), orientation_W_B_.y(), orientation_W_B_.z(), //orientation quaternion
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     gv_init_ << init_lin_vel_W.x(), init_lin_vel_W.y(), init_lin_vel_W.z(),
@@ -348,7 +344,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     // reset reference
     Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_position.normalize();
-    ref_position_ = init_position + initialDistanceOffset_ * unifDistPlusMinusOne_(gen_) * ref_delta_position;
+    ref_position_ = position_W_ + initialDistanceOffset_ * unifDistPlusMinusOne_(gen_) * ref_delta_position;
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_orientation.normalize();
@@ -357,17 +353,17 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    std::cout << "ref delta pos\n" << ref_position_ - gc_init_.segment(0,3) << std::endl;
     Eigen::Quaterniond ref_delta_quaternion(Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
     ref_delta_quaternion.normalize();
-    Eigen::Quaterniond ref_quaternion = init_quaternion * ref_delta_quaternion;
+    Eigen::Quaterniond ref_quaternion = orientation_W_B_ * ref_delta_quaternion;
     ref_quaternion.normalize();
     ref_orientation_ = ref_quaternion;
 
     controller_.setRef(ref_position_, ref_orientation_);
 //    std::cout << "ref_delta_angle deg: " << ref_delta_angle / M_PI * 180.0 << std::endl;
-//    std::cout << "init_quaternion coeffs: " << init_quaternion.coeffs() << std::endl;
+//    std::cout << "orientation_W_B_ coeffs: " << orientation_W_B_.coeffs() << std::endl;
 //    std::cout << "init orientation_W_B_ coeffs: " << orientation_W_B_.coeffs() << std::endl;
 //    std::cout << "ref_delta_quaternion coeffs: " << ref_delta_quaternion.coeffs() << std::endl;
 //    std::cout << "ref_quaternion coeffs: " << ref_quaternion.coeffs() << std::endl;
-//    double error_angle = ref_orientation_.angularDistance(init_quaternion);
+//    double error_angle = ref_orientation_.angularDistance(orientation_W_B_);
 //    std::cout << "initial error angle: " << error_angle<< std::endl;
   }
 
