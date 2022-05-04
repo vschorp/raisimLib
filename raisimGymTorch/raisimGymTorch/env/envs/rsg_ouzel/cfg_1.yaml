@@ -6,7 +6,7 @@ learning_rate: 5e-4
 use_adaptive_lr: False
 
 environment:
-  render: True
+  render: False
 # just testing commenting
   num_envs: 26 #26
   eval_every_n: 1000 #200
@@ -31,9 +31,9 @@ environment:
     success:
       reward: 100.0
       waypointDist: 0.05
-      angleErrorDeg: 3.0
+      angleErrorDeg: 5.0
       linearVel: 0.01
-      angularVelDeg: 1.0
+      angularVelDeg: 0.1
   initialisation:
     distanceOffset: 1.5 #1.5
     angleOffsetDeg: 45.0 #45.0

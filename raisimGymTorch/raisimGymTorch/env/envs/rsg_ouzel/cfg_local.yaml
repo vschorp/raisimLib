@@ -9,7 +9,7 @@ environment:
   render: True
 # just testing commenting
   num_envs: 1 #26
-  eval_every_n: 1000 #200
+  eval_every_n: 100 #200
   num_threads: 1 #30
   simulation_dt: 0.0025
   control_dt: 0.01
@@ -31,9 +31,9 @@ environment:
     success:
       reward: 100.0
       waypointDist: 0.05
-      angleErrorDeg: 3.0
+      angleErrorDeg: 5.0
       linearVel: 0.01
-      angularVelDeg: 1.0
+      angularVelDeg: 0.1
   initialisation:
     distanceOffset: 1.5 #1.5
     angleOffsetDeg: 45.0 #45.0
@@ -69,18 +69,18 @@ environment:
     force_i_gain: 0.4
     use_force_control: 0
     vehicle_params: # from ouzel minimal
-      mass: 4.6
+      mass: 4.28503
       inertia:
-        xx: 0.06
+        xx: 0.0688659
         xy: 0.0
         xz: 0.0
-        yy: 0.06
+        yy: 0.0430584
         yz: 0.0
-        zz: 0.15
+        zz: 0.104985
       com_offset:
-        x: 0.015
+        x: 0.0
         y: 0.0
-        z: 0.015
+        z: 0.0
       gravity: 9.81
   imu:  # from mav_tools/mav_description/urdf/ouzel_base.xacro
     accelerometerBiasCorrelationTime: 300.0
