@@ -101,6 +101,53 @@ class ENVIRONMENT : public RaisimGymEnv {
       server_->launchServer();
       server_->focusOn(ouzel_);
     }
+//    auto mass_vector = ouzel_->getMass();
+//    auto com_W_vector = ouzel_->getBodyCOM_W();
+//    auto inertia_B_vector = ouzel_->getInertia();
+//    double total_mass = 0;
+//    raisim::Vec<3> com_W = Eigen::Vector3d::Zero();
+//    raisim::Vec<3> inertia_W = Eigen::Vector3d::Zero();
+//    raisim::Vec<3> pos_W;
+//    raisim::Vec<3> pos_body_W;
+//    raisim::Vec<3> pos_body_W_squared;
+//    for (int i = 0; i < mass_vector.size(); i++) {
+//      total_mass += mass_vector[i];
+//      com_W += com_W_vector[i] * mass_vector[i];
+//      ouzel_->getPosition(i, pos_body_W);
+//      pos_body_W -= ouzel_->getCOM();
+//    }
+//    com_W = com_W / total_mass;
+//    ouzel_->getPosition(0, pos_W);
+//    raisim::Vec<3> com_offset = com_W - pos_W;
+//    auto a = ouzel_->getCompositeCOM();
+//    auto b = ouzel_->getInertia();
+//    std::cout << "ouzel mass: " << ouzel_->getCompositeMass()[0] << std::endl;
+//    std::cout << "ouzel com W: " << ouzel_->getCOM() << std::endl;
+//    std::cout << "ouzel com_offset: " <<com_offset<< std::endl;
+//    std::cout << "ouzel inertia: " << ouzel_->getMassMatrix() << std::endl;
+//    std::cout << "ouzel inertia: " << ouzel_->getMassMatrix().size() << std::endl;
+//
+//    int baseLink_ = ouzel_->getBodyIdx("ouzel/base_link");
+//    raisim::Vec<3> com_pos = ouzel_->getCOM();
+//    const std::vector<std::string> bodyList = ouzel_->getBodyNames();
+//    raisim::Vec<3> base_link_pos_W;
+//    ouzel_->getFramePosition(baseLink_, base_link_pos_W);
+//    double Ixx=0, Iyy=0, Izz=0;
+//    for (std::string bodyName : bodyList) {
+//      size_t bodyIdx;
+//      bodyIdx = ouzel_->getBodyIdx(bodyName);
+//      raisim::Vec<3> point_W;
+//      ouzel_->getFramePosition(bodyIdx, point_W);
+//      double dx = point_W(0) - com_pos(0);
+//      double dy = point_W(1) - com_pos(1);
+//      double dz = point_W(2) - com_pos(2);
+//      Ixx += (dy*dy + dz*dz)*ouzel_->getMass(bodyIdx);
+//      Iyy += (dx*dx + dz*dz)*ouzel_->getMass(bodyIdx);
+//      Izz += (dy*dy + dx*dx)*ouzel_->getMass(bodyIdx);
+//    }
+//
+//    std::cout << "Inertia diagonal w.r.t. COM: "<<Ixx<<" "<<Iyy<<" "<<Izz << std::endl;
+//    std::cout << "ouzel inertia: " << ouzel_->getCompositeInertia().back()<< std::endl;
   }
 
   void init() final { }

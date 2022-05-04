@@ -69,18 +69,18 @@ environment:
     force_i_gain: 0.4
     use_force_control: 0
     vehicle_params: # from ouzel minimal
-      mass: 4.6
+      mass: 4.28503
       inertia:
-        xx: 0.06
+        xx: 0.0688659
         xy: 0.0
         xz: 0.0
-        yy: 0.06
+        yy: 0.0430584
         yz: 0.0
-        zz: 0.15
+        zz: 0.104985
       com_offset:
-        x: 0.015
+        x: 0.0
         y: 0.0
-        z: 0.015
+        z: 0.0
       gravity: 9.81
   imu:  # from mav_tools/mav_description/urdf/ouzel_base.xacro
     accelerometerBiasCorrelationTime: 300.0

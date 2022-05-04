@@ -47,7 +47,7 @@ namespace rw_omav_controllers {
 //      computeToolError(&tool_position_error_B, &tool_velocity_error_B);
 
       // Update all integrators.
-      updateIntegrators(R_W_B * position_error_B, attitude_error_B, sampling_time);
+//      updateIntegrators(R_W_B * position_error_B, attitude_error_B, sampling_time);
 
       //--------------------------------------------------------//
       // Selective Impedance Control for disturbance rejection. //
@@ -226,6 +226,9 @@ namespace rw_omav_controllers {
       inertia_ << cfg["vehicle_params"]["inertia"]["xx"].template As<float>(), cfg["vehicle_params"]["inertia"]["xy"].template As<float>(), cfg["vehicle_params"]["inertia"]["xz"].template As<float>(),
                   cfg["vehicle_params"]["inertia"]["xy"].template As<float>(), cfg["vehicle_params"]["inertia"]["yy"].template As<float>(), cfg["vehicle_params"]["inertia"]["yz"].template As<float>(),
                   cfg["vehicle_params"]["inertia"]["xz"].template As<float>(), cfg["vehicle_params"]["inertia"]["yz"].template As<float>(), cfg["vehicle_params"]["inertia"]["zz"].template As<float>();
+//      std::cout << "controller mass_: " << mass_ << std::endl;
+//      std::cout << "controller com_offset_: " << com_offset_ << std::endl;
+//      std::cout << "controller inertia_: " << inertia_ << std::endl;
     }
 
     void ImpedanceControlModule::computeStateError(

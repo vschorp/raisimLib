@@ -155,8 +155,11 @@ namespace raisim_sensors {
     raisim::Vec<4> orient_W;
     raisim::Mat<3, 3>  orientMatWB;
 
-    robot_->getPosition(baseLink_, Eigen::Vector3d(0,0,0), point_W);
-    robot_->getBaseOrientation(orientMatWB);
+//    robot_->getPosition(baseLink_, Eigen::Vector3d(0,0,0), point_W);
+//    robot_->getBaseOrientation(orientMatWB);
+//    std::cout << "base link sensor: " << baseLink_ << std::endl;
+    robot_->getFramePosition(baseLink_, point_W);
+    robot_->getFrameOrientation(baseLink_, orientMatWB);
     raisim::rotMatToQuat(orientMatWB,orient_W);
 
     robot_->getFrameVelocity(baseLink_, velocity_W);
