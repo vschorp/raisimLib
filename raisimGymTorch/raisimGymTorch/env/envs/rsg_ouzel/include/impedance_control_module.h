@@ -44,6 +44,27 @@ namespace rw_omav_controllers {
     static constexpr double kDefaultPosErrorMax =
             0.0;  ///< 0 means position error not limited.
 
+   class lowpassWrench {
+    public:
+        lowpassWrench() {
+            forceState_.setZero();
+            torqueState_.setZero();
+        }
+        void update(Eigen::Vector3d force, Eigen::Vector3d torque,double cutoff_rad, double dt) {
+            forceState_ += (force-forceState_)*cutoff_rad*dt;
+            torqueState_ += (torque-torqueState_)*cutoff_rad*dt;
+        }
+        Eigen::VectorXd getForce() {
+            return forceState_;
+        }
+        Eigen::VectorXd getTorque() {
+            return torqueState_;
+        }
+    private:
+        Eigen::Vector3d forceState_;
+        Eigen::Vector3d torqueState_;
+    };
+
     /// controller parameters
     struct ImpedanceControlModuleParameters {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW

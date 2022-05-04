@@ -140,8 +140,13 @@ namespace rw_omav_controllers {
               com_offset_.cross(linear_accel_B_des);
       angular_accel_B_des += inertia_.inverse() * moment_ff;
 
-      (*wrench_command).thrust = mass_ * linear_accel_B_des;
-      (*wrench_command).torque = inertia_ * angular_accel_B_des;
+      static lowpassWrench commandFilter;
+      //Filter with 40.0rad cutoff frequency. Filter runs at 200hz (same sampling rate of the controller)
+      commandFilter.update(linear_accel_B_des, angular_accel_B_des,40.0,(1.0/200.0));
+
+
+      (*wrench_command).thrust = mass_ * commandFilter.getForce();
+      (*wrench_command).torque = inertia_ * commandFilter.getTorque();
 
 //      if (wrench_command->thrust.norm() > 1000 || wrench_command->torque.norm() > 1000) {
 //        std::cout << "warning: high wrench" << std::endl;
