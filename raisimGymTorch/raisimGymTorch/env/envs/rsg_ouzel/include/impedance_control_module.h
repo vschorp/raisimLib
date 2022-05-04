@@ -46,9 +46,9 @@ namespace rw_omav_controllers {
 
    class lowpassWrench {
     public:
-        lowpassWrench() {
-            forceState_.setZero();
-            torqueState_.setZero();
+        lowpassWrench(Eigen::Vector3d initForce, Eigen::Vector3d initTorque) {
+            forceState_ = initForce;
+            torqueState_ = initTorque;
         }
         void update(Eigen::Vector3d force, Eigen::Vector3d torque,double cutoff_rad, double dt) {
             forceState_ += (force-forceState_)*cutoff_rad*dt;

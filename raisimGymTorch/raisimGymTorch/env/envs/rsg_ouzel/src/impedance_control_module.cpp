@@ -140,7 +140,7 @@ namespace rw_omav_controllers {
               com_offset_.cross(linear_accel_B_des);
       angular_accel_B_des += inertia_.inverse() * moment_ff;
 
-      static lowpassWrench commandFilter;
+      static lowpassWrench commandFilter(mass_ * R_W_B.transpose() * gravity_ * Eigen::Vector3d::UnitZ(), Eigen::Vector3d::Zero());
       //Filter with 40.0rad cutoff frequency. Filter runs at 200hz (same sampling rate of the controller)
       commandFilter.update(linear_accel_B_des, angular_accel_B_des,40.0,(1.0/200.0));
 
