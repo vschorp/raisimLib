@@ -9,7 +9,7 @@
 #include <delta_control/dynamics/dynamics.h>
 #include <delta_control/kinematics/kinematics.h>
 #include "ros_raisim_interface/actuators.h"
-
+#include <Eigen/Eigen>
 
 #ifndef RAISIM_DELTA_DYNAMICS_
 #define RAISIM_DELTA_DYNAMICS_
