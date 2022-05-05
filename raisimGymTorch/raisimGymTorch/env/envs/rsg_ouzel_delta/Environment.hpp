@@ -152,7 +152,11 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     // delta arm
     Eigen::Vector3d desired_joint_pos(actionD.tail(3));
-    delta_sym_->sendActuatorsCommand(desired_joint_pos);
+    Eigen::Vector3d desired_clamped_joint_pos = desired_joint_pos;
+    std::clamp(desired_clamped_joint_pos(0), delta_min_joint_angle_, delta_max_joint_angle_);
+    std::clamp(desired_clamped_joint_pos(1), delta_min_joint_angle_, delta_max_joint_angle_);
+    std::clamp(desired_clamped_joint_pos(2), delta_min_joint_angle_, delta_max_joint_angle_);
+    delta_sym_->sendActuatorsCommand(desired_clamped_joint_pos);
 
 //    std::cout << "base link idx: " << ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
     Vec<3> orig;
@@ -223,6 +227,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     rewards_.record("orientError", float(error_angle));
     rewards_.record("linearRefCorr", float(ref_position_corr_vec.squaredNorm()));
     rewards_.record("orientRefCorr", float(ref_orientation_corr_angle_axis.angle()));
+    rewards_.record("deltaJointAngles", float(std::abs(desired_joint_pos(0)) + std::abs(desired_joint_pos(1)) + std::abs(desired_joint_pos(2))));
+    rewards_.record("deltaJointAnglesClamp", float((desired_joint_pos - desired_clamped_joint_pos).norm()));
 //    rewards_.record("angularVel", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("force", anymal_->getGeneralizedForce().squaredNorm());
 //    rewards_.record("torque", anymal_->getGeneralizedForce().squaredNorm());
@@ -439,6 +445,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::Vector3d B_om_WB_prev_;
   Eigen::Vector3d pos_offset_BD_;
   Eigen::Quaterniond ang_offset_BD_;
+  double delta_min_joint_angle_ = 0.0;
+  double delta_max_joint_angle_ = 1.4; // rad
 
   int baseLink_;
 

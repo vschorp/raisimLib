@@ -8,7 +8,7 @@ use_adaptive_lr: True
 environment:
   render: True
 # just testing commenting
-  num_envs: 26 #26
+  num_envs: 1 #26
   eval_every_n: 1000 #200
   num_threads: 1 #30
   simulation_dt: 0.0025
@@ -23,6 +23,10 @@ environment:
       coeff: -1.0e-1
     orientRefCorr:
       coeff: -1.0e-1
+    deltaJointAngles:
+      coeff: -1.0e-1
+    deltaJointAnglesClamp:
+      coeff: -1.0e1
   termination:
     oob:
       reward: -10.0
@@ -126,5 +130,6 @@ environment:
     q_BO: {w: 0.0, x: 1.0, y: 0.0, z: 0.0}
 
 architecture:
-  policy_net: [64, 64]
+  policy_net: [64, 256, 64]
   value_net: [64, 64]
+
