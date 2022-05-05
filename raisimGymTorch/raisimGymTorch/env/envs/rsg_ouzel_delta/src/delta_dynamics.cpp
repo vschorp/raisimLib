@@ -81,6 +81,13 @@ void DeltaController::sendActuatorsCommand() {
   joints_[2]->send_cmd(joints_command_(2));
 }
 
+void DeltaController::setJointAngles(const Eigen::Vector3d jointAngles) {
+  joints_[0]->set_angle(jointAngles(0));
+  joints_[1]->set_angle(jointAngles(1));
+  joints_[2]->set_angle(jointAngles(2));
+}
+
+
 void DeltaController::initialize(const double& r_B, const double& r_T, const double& l_P,
                                  const double& l_D, const double& theta_min,
                                  const double& theta_max, const double& dt) {

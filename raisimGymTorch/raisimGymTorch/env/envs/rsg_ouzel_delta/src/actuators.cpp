@@ -32,4 +32,10 @@ namespace raisim_actuators {
         return true;
         // this->setEffort(cmd);
       }
+
+  void delta_joint::set_angle(double angle) {
+    x_ = angle;
+    xd_ = 0.0;
+    xdd_ = 0.0;
+  }
 }

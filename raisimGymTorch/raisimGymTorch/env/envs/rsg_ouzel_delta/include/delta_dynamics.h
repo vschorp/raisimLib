@@ -95,7 +95,9 @@ class DeltaController {
   void sendActuatorsCommand(const Eigen::Vector3d jointsPos);
   void sendActuatorsCommand();
 
-  void updateState(const Eigen::Quaterniond& base_q_WB, const Eigen::Vector3d& base_vel_B,
+  void setJointAngles(const Eigen::Vector3d jointAngles);
+
+    void updateState(const Eigen::Quaterniond& base_q_WB, const Eigen::Vector3d& base_vel_B,
                    const Eigen::Vector3d& base_angvel_B, const Eigen::VectorXd& q_in,
                    const Eigen::VectorXd& qd_in, const Eigen::VectorXd& effort_in,
                    const double& dt);

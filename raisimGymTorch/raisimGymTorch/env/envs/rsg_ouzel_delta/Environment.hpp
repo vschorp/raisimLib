@@ -153,6 +153,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     // delta arm
     Eigen::Vector3d desired_joint_pos(actionD.tail(3));
     Eigen::Vector3d desired_clamped_joint_pos = desired_joint_pos;
+    std::cout << "desired_clamped_joint_pos: " << desired_clamped_joint_pos << std::endl;
     std::clamp(desired_clamped_joint_pos(0), delta_min_joint_angle_, delta_max_joint_angle_);
     std::clamp(desired_clamped_joint_pos(1), delta_min_joint_angle_, delta_max_joint_angle_);
     std::clamp(desired_clamped_joint_pos(2), delta_min_joint_angle_, delta_max_joint_angle_);
@@ -253,6 +254,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     delta_joint_angle_ = delta_sym_->getqPos();
     delta_joint_angular_vel_ = delta_sym_->getqVel();
 
+    Eigen::Vector3d end_effector_position_D;
+    delta_sym_->fwkinPosition(&end_effector_position_D);
+    end_effector_pos_W_ = position_W_ + pos_offset_BD_ + orientation_W_B_.toRotationMatrix()*ang_offset_BD_.matrix()*end_effector_position_D;
+    end_effector_pos_W_gt_ = position_W_gt_ + pos_offset_BD_ + orientation_W_B_gt_.toRotationMatrix()*ang_offset_BD_.matrix()*end_effector_position_D;
+
     ouzel_->getState(gc_, gv_);
 
 //    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
@@ -278,7 +284,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     /// convert it to float
-    Eigen::Vector3d position_CR_W = ref_position_ - position_W_;//CR for current to reference
+    Eigen::Vector3d position_CR_W = ref_position_ - end_effector_pos_W_;//CR for current to reference
     Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
     Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix();
     Eigen::VectorXd ob_double(obDim_);
@@ -356,6 +362,10 @@ class ENVIRONMENT : public RaisimGymEnv {
                 init_ang_vel_W.x(), init_ang_vel_W.y(), init_ang_vel_W.z(),
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
+    //reset delta arm
+    Eigen::Vector3d init_joint_angles(std::abs(unifDistPlusMinusOne_(gen_)) * 1.4, std::abs(unifDistPlusMinusOne_(gen_)) * 1.4, std::abs(unifDistPlusMinusOne_(gen_)) * 1.4 );
+    delta_sym_->setJointAngles(init_joint_angles);
+
     // reset reference
     Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     ref_delta_position.normalize();
@@ -384,13 +394,13 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void computeErrorMetrics(double& waypointDist, double& errorAngle) {
     // Maybe want to clamp the error terms?
-    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
-    Eigen::Vector3d position_W_gt = odometry_measurement_gt.segment(0, 3);
-    waypointDist = (position_W_gt - ref_position_).squaredNorm();
+//    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
+//    Eigen::Vector3d position_W_gt = odometry_measurement_gt.segment(0, 3);
+    waypointDist = (end_effector_pos_W_gt_ - ref_position_).squaredNorm();
 
 //    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
-    Eigen::Quaterniond orientation_W_B_gt(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6));
-    errorAngle = orientation_W_B_gt.angularDistance(ref_orientation_);
+//    Eigen::Quaterniond orientation_W_B_gt(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6));
+    errorAngle = orientation_W_B_gt_.angularDistance(ref_orientation_);
   }
 
   Eigen::Quaterniond QuaternionFromTwoVectors(Eigen::Vector3d _orientation_vec_1, Eigen::Vector3d _orientation_vec_2) {
@@ -447,6 +457,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::Quaterniond ang_offset_BD_;
   double delta_min_joint_angle_ = 0.0;
   double delta_max_joint_angle_ = 1.4; // rad
+  Eigen::Vector3d end_effector_pos_W_;
+  Eigen::Vector3d end_effector_pos_W_gt_;
 
   int baseLink_;
 

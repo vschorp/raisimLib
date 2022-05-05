@@ -21,6 +21,8 @@ namespace raisim_actuators {
 
       bool send_cmd(double cmd);
 
+      void set_angle(double angle);
+
       const double getPos() {
         return x_;
       }
