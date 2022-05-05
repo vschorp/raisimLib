@@ -18,11 +18,11 @@ parser.add_argument('-c', '--config', help='config file name', type=str, default
 args = parser.parse_args()
 
 # directories
-task_path = os.path.dirname(os.path.realpath(__file__))
+task_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 home_path = task_path + "/../../../../.."
 
 # config
-config_fpath = os.path.join(task_path, args.config)
+config_fpath = os.path.join(task_path, "config", args.config)
 print(f"loading config file {config_fpath}")
 cfg = YAML().load(open(config_fpath, 'r'))
 

@@ -33,11 +33,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"using device {device}!")
 
 # directories
-task_path = os.path.dirname(os.path.realpath(__file__))
+task_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 home_path = task_path + "/../../../../.."
 
 # config
-config_fpath = os.path.join(task_path, args.config)
+config_fpath = os.path.join(task_path, "config", args.config)
 print(f"loading config file {config_fpath}")
 cfg = YAML().load(open(config_fpath, 'r'))
 

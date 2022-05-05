@@ -3,7 +3,7 @@
  *  Eugenio Cuniato 21.07.2021
  */
 
-#include "sensors.h"
+#include "include/sensors.h"
 
 namespace raisim_sensors {
 
