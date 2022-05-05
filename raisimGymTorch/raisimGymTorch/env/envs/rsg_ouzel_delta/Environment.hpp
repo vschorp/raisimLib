@@ -73,8 +73,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 27;
-    actionDim_ =  9;
+    obDim_ = 33;
+    actionDim_ =  12;
     actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
     position_W_.setZero();
     orientation_W_B_.setIdentity();
@@ -151,32 +151,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    std::cout << "commanded thrust:\n" << wrench_command.thrust << "\n" << "commanded torque:\n" << wrench_command.torque << std::endl;
 
     // delta arm
-    Eigen::Vector3d desired_joint_pos;
+    Eigen::Vector3d desired_joint_pos(actionD.tail(3));
     delta_sym_->sendActuatorsCommand(desired_joint_pos);
-    Eigen::Vector3d ee_pos,ee_vel,ee_acc;
-    delta_sym_->fwkinPosition(&ee_pos);
-    delta_sym_->fwkinVel(&ee_vel, ee_pos);
-    ee_acc = (ee_vel - ee_vel_prev_)/control_dt_;
-    ee_vel_prev_ = ee_vel;
-
-    Eigen::Vector3d B_dv_WB = orientation_W_B_.inverse().normalized().toRotationMatrix() * bodyLinearVel_;
-    Eigen::Vector3d B_om_WB= orientation_W_B_.inverse().normalized().toRotationMatrix() * bodyAngularVel_;
-    Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_)/control_dt_;
-    B_om_WB_prev_ = B_om_WB;
-
-    // Compute feed forward base wrench due to dynamics.
-    Eigen::Vector3d force_B, torque_B;
-    delta_sym_->getBaseWrench(&force_B, &torque_B, orientation_W_B_,
-                              B_om_WB, B_dom_WB, B_dv_WB,
-                              ee_pos, ee_vel, ee_acc);
-
-    Eigen::Vector3d base_pos_W(ouzel_->getGeneralizedCoordinate()[0],ouzel_->getGeneralizedCoordinate()[1],ouzel_->getGeneralizedCoordinate()[2]);
-    Eigen::Vector3d eef_pos_W = base_pos_W + pos_offset_BD_ + orientation_W_B_.toRotationMatrix()*ang_offset_BD_.matrix()*ee_pos;
-    delta_eef_->setPosition(eef_pos_W(0),eef_pos_W(1),eef_pos_W(2));
-    delta_eef_->setOrientation(orientation_W_B_);
-
-    ouzel_->setExternalForce(baseLink_, raisim::ArticulatedSystem::Frame::BODY_FRAME, force_B, raisim::ArticulatedSystem::Frame::BODY_FRAME, Eigen::Vector3d(0,0,0));
-    ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
 
 //    std::cout << "base link idx: " << ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
     Vec<3> orig;
@@ -186,9 +162,42 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    Eigen::Vector3d test_torque_W(0, 0, 0.1);
 //    Eigen::Vector3d test_torque_B = orientation_W_B_gt_.inverse().toRotationMatrix() * test_torque_W;
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
+      // get current gt measurements
+      Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
+      position_W_gt_ = odometry_measurement_gt.segment(0, 3);
+      orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6)).normalized();
+      bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
+      bodyAngularVel_gt_ = odometry_measurement_gt.segment(10, 3);
+
       // apply wrench on ouzel
       ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
       ouzel_->setExternalTorqueInBodyFrame(baseLink_, wrench_command.torque);
+
+      // delta arm simulation
+      Eigen::Vector3d ee_pos,ee_vel,ee_acc;
+      delta_sym_->fwkinPosition(&ee_pos);
+      delta_sym_->fwkinVel(&ee_vel, ee_pos);
+      ee_acc = (ee_vel - ee_vel_prev_)/control_dt_;
+      ee_vel_prev_ = ee_vel;
+
+      Eigen::Vector3d B_dv_WB = orientation_W_B_gt_.inverse().normalized().toRotationMatrix() * bodyLinearVel_gt_;
+      Eigen::Vector3d B_om_WB= orientation_W_B_gt_.inverse().normalized().toRotationMatrix() * bodyAngularVel_gt_;
+      Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_)/control_dt_;
+      B_om_WB_prev_ = B_om_WB;
+
+      // Compute feed forward base wrench due to dynamics.
+      Eigen::Vector3d force_B, torque_B;
+      delta_sym_->getBaseWrench(&force_B, &torque_B, orientation_W_B_gt_,
+                                B_om_WB, B_dom_WB, B_dv_WB,
+                                ee_pos, ee_vel, ee_acc);
+
+      Eigen::Vector3d base_pos_W(ouzel_->getGeneralizedCoordinate()[0],ouzel_->getGeneralizedCoordinate()[1],ouzel_->getGeneralizedCoordinate()[2]);
+      Eigen::Vector3d eef_pos_W = base_pos_W + pos_offset_BD_ + orientation_W_B_gt_.toRotationMatrix()*ang_offset_BD_.matrix()*ee_pos;
+      delta_eef_->setPosition(eef_pos_W(0),eef_pos_W(1),eef_pos_W(2));
+      delta_eef_->setOrientation(orientation_W_B_gt_);
+
+      ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME, force_B, ouzel_->BODY_FRAME, orig);
+      ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
 //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
 //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->WORLD_FRAME, levitation_force_W, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
 //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, levitation_force_B, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
@@ -263,7 +272,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     Eigen::VectorXd ob_double(obDim_);
     ob_double << position_CR_W, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
                  bodyLinearVel_, bodyAngularVel_,
-                 ref_orientation_mat.col(0), ref_orientation_mat.col(1), ref_orientation_mat.col(2);
+                 ref_orientation_mat.col(0), ref_orientation_mat.col(1), ref_orientation_mat.col(2),
+                 delta_joint_angle_, delta_joint_angular_vel_;
     ob = ob_double.cast<float>();
 //    std::cout << "orientation_W_B_ coeffs: \n" << orientation_W_B_.coeffs() << std::endl;
 //    std::cout << "orientation_W_B_mat: \n" << orientation_W_B_mat << std::endl;
@@ -405,7 +415,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   double terminalSuccessAngularVel_;
   Eigen::VectorXd actionMean_, actionStd_;
 //  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
-  Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_;
+  Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_, delta_joint_angle_, delta_joint_angular_vel_;
   Eigen::Quaterniond orientation_W_B_;
   Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
   Eigen::Quaterniond orientation_W_B_gt_;
