@@ -10,9 +10,10 @@
 #include <functional>
 #include <algorithm>
 
-#include "../../RaisimGymEnv.hpp"
-#include "impedance_control_module.h"
-#include "sensors.h"
+#include "RaisimGymEnv.hpp"
+#include "include/impedance_control_module.h"
+#include "include/sensors.h"
+#include "include/delta_dynamics.h"
 
 namespace raisim {
 
@@ -37,6 +38,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     ouzel_->setName("ouzel_delta");
     ouzel_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     world_->addGround(-10.0); // we don't need a ground for the drone
+    baseLink_ = ouzel_->getBodyIdx("ouzel/base_link");
 
     /// get robot data
     gcDim_ = ouzel_->getGeneralizedCoordinateDim();
@@ -50,7 +52,17 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_); gv_init_.setZero(gvDim_);
 //    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
-    sampling_time_ = cfg["control_dt"].template As<float>();
+    control_dt_ = cfg["control_dt"].template As<float>();
+    simulation_dt_ = cfg["simulation_dt"].template As<float>();
+
+    /// initialize delta
+    delta_sym_ = new delta_dynamics::DeltaController(cfg_, control_dt_);
+    delta_eef_ = world_->addCylinder(0.005,0.002,0.01,"default",raisim::COLLISION(15));
+    delta_eef_->setPosition(2,2,2);
+    delta_eef_->setBodyType(raisim::BodyType::STATIC);
+    ee_vel_prev_ = Eigen::Vector3d::Zero();
+    pos_offset_BD_ = Eigen::Vector3d(0.00363497, -0.00548676, -0.07537646);
+    ang_offset_BD_ = Eigen::Quaterniond(0.00726273,0.9999278,0.00176325,0.00940957);
 
     /// Initialisation Parameters
     initialDistanceOffset_ = cfg["initialisation"]["distanceOffset"].template As<float>();
@@ -85,8 +97,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     terminalSuccessAngularVel_ = cfg["termination"]["success"]["angularVelDeg"].template As<float>() / 180.0 * M_PI;
 
     // Add sensors
-    auto* odometry_noise = new raisim_sensors::odometryNoise(sampling_time_, cfg["odometryNoise"]);
-    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, "ouzel", "ouzel/base_link", odometry_noise);
+    auto* odometry_noise = new raisim_sensors::odometryNoise(control_dt_, cfg["odometryNoise"]);
+    odometry_ = raisim_sensors::odometry(ouzel_, control_dt_, "ouzel", "ouzel/base_link", odometry_noise);
 
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
@@ -135,8 +147,36 @@ class ENVIRONMENT : public RaisimGymEnv {
     controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr);
 
     mav_msgs::EigenTorqueThrust wrench_command;
-    controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
+    controller_.calculateWrenchCommand(&wrench_command, control_dt_);
 //    std::cout << "commanded thrust:\n" << wrench_command.thrust << "\n" << "commanded torque:\n" << wrench_command.torque << std::endl;
+
+    // delta arm
+    Eigen::Vector3d desired_joint_pos;
+    delta_sym_->sendActuatorsCommand(desired_joint_pos);
+    Eigen::Vector3d ee_pos,ee_vel,ee_acc;
+    delta_sym_->fwkinPosition(&ee_pos);
+    delta_sym_->fwkinVel(&ee_vel, ee_pos);
+    ee_acc = (ee_vel - ee_vel_prev_)/control_dt_;
+    ee_vel_prev_ = ee_vel;
+
+    Eigen::Vector3d B_dv_WB = orientation_W_B_.inverse().normalized().toRotationMatrix() * bodyLinearVel_;
+    Eigen::Vector3d B_om_WB= orientation_W_B_.inverse().normalized().toRotationMatrix() * bodyAngularVel_;
+    Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_)/control_dt_;
+    B_om_WB_prev_ = B_om_WB;
+
+    // Compute feed forward base wrench due to dynamics.
+    Eigen::Vector3d force_B, torque_B;
+    delta_sym_->getBaseWrench(&force_B, &torque_B, orientation_W_B_,
+                              B_om_WB, B_dom_WB, B_dv_WB,
+                              ee_pos, ee_vel, ee_acc);
+
+    Eigen::Vector3d base_pos_W(ouzel_->getGeneralizedCoordinate()[0],ouzel_->getGeneralizedCoordinate()[1],ouzel_->getGeneralizedCoordinate()[2]);
+    Eigen::Vector3d eef_pos_W = base_pos_W + pos_offset_BD_ + orientation_W_B_.toRotationMatrix()*ang_offset_BD_.matrix()*ee_pos;
+    delta_eef_->setPosition(eef_pos_W(0),eef_pos_W(1),eef_pos_W(2));
+    delta_eef_->setOrientation(orientation_W_B_);
+
+    ouzel_->setExternalForce(baseLink_, raisim::ArticulatedSystem::Frame::BODY_FRAME, force_B, raisim::ArticulatedSystem::Frame::BODY_FRAME, Eigen::Vector3d(0,0,0));
+    ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
 
 //    std::cout << "base link idx: " << ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
     Vec<3> orig;
@@ -147,8 +187,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 //    Eigen::Vector3d test_torque_B = orientation_W_B_gt_.inverse().toRotationMatrix() * test_torque_W;
     for(int i=0; i< int(control_dt_ / simulation_dt_ + 1e-10); i++){
       // apply wrench on ouzel
-      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
-      ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"), wrench_command.torque);
+      ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
+      ouzel_->setExternalTorqueInBodyFrame(baseLink_, wrench_command.torque);
 //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME, orig); // set force in body frame
 //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->WORLD_FRAME, levitation_force_W, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
 //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"), ouzel_->BODY_FRAME, levitation_force_B, ouzel_->WORLD_FRAME, ouzel_->getCOM()); // set force in body frame
@@ -370,13 +410,21 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
   Eigen::Quaterniond orientation_W_B_gt_;
   std::set<size_t> footIndices_;
-  double sampling_time_;
   Eigen::Vector3d ref_position_;
   Eigen::Quaterniond ref_orientation_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 
   raisim_sensors::odometry odometry_;
+
+  delta_dynamics::DeltaController* delta_sym_;
+  raisim::Cylinder* delta_eef_;
+  Eigen::Vector3d ee_vel_prev_;
+  Eigen::Vector3d B_om_WB_prev_;
+  Eigen::Vector3d pos_offset_BD_;
+  Eigen::Quaterniond ang_offset_BD_;
+
+  int baseLink_;
 
   //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;

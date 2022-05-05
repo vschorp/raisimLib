@@ -13,7 +13,7 @@
  *
  */
 
-#include "impedance_control_module.h"
+#include "include/impedance_control_module.h"
 
 namespace rw_omav_controllers {
 

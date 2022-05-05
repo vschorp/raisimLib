@@ -3,12 +3,12 @@
  *  Eugenio Cuniato 21.07.2021
  */
 
-#include "ros_raisim_interface/delta_dynamics.h"
-#include "mav_msgs/Actuators.h"
+#include "include/delta_dynamics.h"
+//#include "mav_msgs/Actuators.h"
 
 namespace delta_dynamics {
 
-DeltaController::DeltaController(ros::NodeHandle& nh, double dt)
+DeltaController::DeltaController(const Yaml::Node& cfg, double dt)
     : pos_error_integrator_max_(kDefaultPosIntegratorMax),
       q_error_integrator_max_(kDefaultQIntegratorMax),
       pos_error_integrator_(Eigen::Vector3d::Zero()),
@@ -18,7 +18,8 @@ DeltaController::DeltaController(ros::NodeHandle& nh, double dt)
       filter_cutoff_f_(kDefaultFilterCutoffFrequency),
       arm_fixed_(false),
       fixed_arm_z_(kDefaultFixedArmZ),
-      filter_base_wrench_(false) {
+      filter_base_wrench_(false),
+      cfg_(cfg) {
   params_ = std::make_shared<delta_control::DeltaControllerParameters>();
   state_ = std::make_shared<delta_control::DeltaState>();
   reference_ = std::make_shared<delta_control::DeltaRef>();
@@ -26,7 +27,6 @@ DeltaController::DeltaController(ros::NodeHandle& nh, double dt)
   dyn_ = std::make_shared<delta_control::Dynamics>(params_);
 
   sample_time_ = dt;
-  pnh_ = nh;
   prev_q_cmd_.setZero();
   for (int i=0; i<3; i++) {
     joints_.push_back( new raisim_actuators::delta_joint(sample_time_));
@@ -34,81 +34,51 @@ DeltaController::DeltaController(ros::NodeHandle& nh, double dt)
 
   setMode(0);
   // Read Delta parameters.
-  double r_B, r_T, l_P, l_D, theta_min, theta_max;
-  if(!pnh_.param("r_B", r_B, delta_control::kDefaultBasePlateRadius))
-    ROS_ERROR_STREAM("No param found in param server! Using default value: r_B = "<< r_B);
-  pnh_.param("r_T", r_T, delta_control::kDefaultToolPlateRadius);
-  pnh_.param("l_P", l_P, delta_control::kDefaultProximalLinkLength);
-  pnh_.param("l_D", l_D, delta_control::kDefaultDistalLinkLength);
-  pnh_.param("theta_min", theta_min, delta_control::kDefaultServoMin);
-  pnh_.param("theta_max", theta_max, delta_control::kDefaultServoMax);
+  double r_B = cfg_["r_B"].template As<float>();
+  double r_T = cfg_["r_T"].template As<float>();
+  double l_P = cfg_["l_P"].template As<float>();
+  double l_D = cfg_["l_D"].template As<float>();
+  double theta_min = cfg_["theta_min"].template As<float>();
+  double theta_max = cfg_["theta_max"].template As<float>();
   initialize(r_B, r_T, l_P, l_D, theta_min, theta_max, sample_time_);
 
-  double m_Base, m_O, m_A, m_P;
   Eigen::Vector3d I_Base, I_O, I_A, I_P, pCom_Base, pCom_O, pCom_A, pCom_P, p_BO;
   Eigen::Quaterniond q_BO;
-  pnh_.param("m_Base", m_Base, delta_dynamics::kDefaultMassBase);
-  pnh_.param("m_O", m_O, delta_dynamics::kDefaultMassDeltaBase);
-  pnh_.param("m_A", m_A, delta_dynamics::kDefaultMassPromixalLink);
-  pnh_.param("m_P", m_P, delta_dynamics::kDefaultMassPlatform);
+  double m_Base = cfg_["m_Base"].template As<float>();
+  double m_O = cfg_["m_O"].template As<float>();
+  double m_A = cfg_["m_A"].template As<float>();
+  double m_P = cfg_["m_P"].template As<float>();
+
   //ROS_WARN_STREAM("Total delta mass: "<<(m_Base+m_O+m_A+m_P));
-  I_Base = getParamVector3("I_Base", delta_dynamics::kDefaultIntertiaBase);
-  I_O = getParamVector3("I_O", delta_dynamics::kDefaultIntertiaDeltaBase);
-  I_A = getParamVector3("I_A", delta_dynamics::kDefaultIntertiaProximalLink);
-  I_P = getParamVector3("I_P", delta_dynamics::kDefaultIntertiaPlatform);
-  pCom_Base = getParamVector3("pCom_Base", delta_dynamics::kDefaultComOffsetBase);
-  pCom_O = getParamVector3("pCom_O", delta_dynamics::kDefaultComOffsetDeltaBase);
-  pCom_A = getParamVector3("pCom_A", delta_dynamics::kDefaultComOffsetProximalLink);
-  pCom_P = getParamVector3("pCom_P", delta_dynamics::kDefaultComOffsetPlatform);
-  p_BO = getParamVector3("p_BO", delta_dynamics::kDefaultPosBaseToDelta);
-  q_BO = getParamQuat("q_BO", delta_dynamics::kDefaultQBaseToDelta);
+  I_Base = getParamVector3("I_Base");
+  I_O = getParamVector3("I_O");
+  I_A = getParamVector3("I_A");
+  I_P = getParamVector3("I_P");
+  pCom_Base = getParamVector3("pCom_Base");
+  pCom_O = getParamVector3("pCom_O");
+  pCom_A = getParamVector3("pCom_A");
+  pCom_P = getParamVector3("pCom_P");
+  p_BO = getParamVector3("p_BO");
+  q_BO = getParamQuat("q_BO");
   initializeDynamics(m_Base, m_O, m_A, m_P, I_Base, I_O, I_A, I_P, pCom_Base,
                                        pCom_O, pCom_A, pCom_P, p_BO, q_BO);
 
-  delta_command_sub_ = pnh_.subscribe("/delta/command/motor_speed", 1, &DeltaController::deltaCommandCb,
-                    this, ros::TransportHints().tcpNoDelay());
-  delta_state_pub_ = pnh_.advertise<mav_msgs::Actuators>("/delta/raisim/motor_states",1);
-  base_wrench_pub_ = pnh_.advertise<geometry_msgs::WrenchStamped>("/delta/raisim/base_wrench",1);
   joints_command_.Zero();
   joints_command_(0) = joints_[0]->getPos();
   joints_command_(1) = joints_[1]->getPos();
   joints_command_(2) = joints_[2]->getPos();
 };
 
-void DeltaController::deltaCommandCb(const mav_msgs::Actuators &msg) {
-  Eigen::Vector3d jointsPos;
-  jointsPos(0) = msg.angles[0];
-  jointsPos(1) = msg.angles[1];
-  jointsPos(2) = msg.angles[2];
-
-  joints_command_ = jointsPos;
-}
-
 void DeltaController::sendActuatorsCommand(const Eigen::Vector3d jointsPos) {
   joints_[0]->send_cmd(jointsPos(0));
   joints_[1]->send_cmd(jointsPos(1));
   joints_[2]->send_cmd(jointsPos(2));
-  // ROS_INFO_STREAM(jointsPos.transpose());
 }
 
 void DeltaController::sendActuatorsCommand() {
   joints_[0]->send_cmd(joints_command_(0));
   joints_[1]->send_cmd(joints_command_(1));
   joints_[2]->send_cmd(joints_command_(2));
-  // ROS_INFO_STREAM(jointsPos.transpose());
-}
-
-void DeltaController::publishJointStates() {
-  mav_msgs::Actuators msg;
-  msg.header.stamp = ros::Time::now();
-
-  for(int i=0; i<3; i++) {
-    msg.angles.push_back(getqPos()(i));
-    msg.angular_velocities.push_back(getqVel()(i));
-  }
-
-  delta_state_pub_.publish(msg);
-
 }
 
 void DeltaController::initialize(const double& r_B, const double& r_T, const double& l_P,
@@ -369,22 +339,18 @@ void DeltaController::getControlCommand(Eigen::VectorXd* delta_pos_cmd,
   prev_q_cmd_ = *delta_pos_cmd;
 }  // namespace delta_control
 
-Eigen::Vector3d DeltaController::getParamVector3(const std::string& param_name,
-                                                  const Eigen::Vector3d& default_value) {
-  double x, y, z;
-  pnh_.param(param_name + "/x", x, default_value(0));
-  pnh_.param(param_name + "/y", y, default_value(1));
-  pnh_.param(param_name + "/z", z, default_value(2));
+Eigen::Vector3d DeltaController::getParamVector3(const std::string& param_name) {
+  double x = cfg_[param_name]["x"].template As<float>();
+  double y = cfg_[param_name]["y"].template As<float>();
+  double z = cfg_[param_name]["z"].template As<float>();
   return Eigen::Vector3d(x, y, z);
 }
 
-Eigen::Quaterniond DeltaController::getParamQuat(const std::string& param_name,
-                                                  const Eigen::Quaterniond& default_value) {
-  double w, x, y, z;
-  pnh_.param(param_name + "/w", w, default_value.w());
-  pnh_.param(param_name + "/x", x, default_value.x());
-  pnh_.param(param_name + "/y", y, default_value.y());
-  pnh_.param(param_name + "/z", z, default_value.z());
+Eigen::Quaterniond DeltaController::getParamQuat(const std::string& param_name) {
+  double w = cfg_[param_name]["w"].template As<float>();
+  double x = cfg_[param_name]["x"].template As<float>();
+  double y = cfg_[param_name]["y"].template As<float>();
+  double z = cfg_[param_name]["z"].template As<float>();
   return Eigen::Quaterniond(w, x, y, z);
 }
 
@@ -594,15 +560,6 @@ void DeltaController::getBaseWrench(Eigen::Vector3d* force_B, Eigen::Vector3d* t
     *force_B = force_B_raw;
     *torque_B = torque_B_raw;
   // }
-  geometry_msgs::WrenchStamped msg;
-  msg.header.stamp = ros::Time::now();
-  msg.wrench.force.x = force_B_raw(0);
-  msg.wrench.force.y = force_B_raw(1);
-  msg.wrench.force.z = force_B_raw(2);
-  msg.wrench.torque.x = torque_B_raw(0);
-  msg.wrench.torque.y = torque_B_raw(1);
-  msg.wrench.torque.z = torque_B_raw(2);
-  base_wrench_pub_.publish(msg);
 }
 
 void DeltaController::getWorkspaceRegion(int* upper_index, int* lower_index,

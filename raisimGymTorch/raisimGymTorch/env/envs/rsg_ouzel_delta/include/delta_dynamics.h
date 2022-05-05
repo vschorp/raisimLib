@@ -3,12 +3,13 @@
  *  Eugenio Cuniato 21.07.2021
  */
 
-#include "ros/ros.h"
 //Delta arm
-#include <delta_control/controller_helpers.h>
-#include <delta_control/dynamics/dynamics.h>
-#include <delta_control/kinematics/kinematics.h>
-#include "ros_raisim_interface/actuators.h"
+#include "delta_control/controller_helpers.h"
+#include "delta_control/dynamics.h"
+#include "delta_control/kinematics.h"
+#include "actuators.h"
+#include "Yaml.hpp"
+
 #include <Eigen/Eigen>
 
 #ifndef RAISIM_DELTA_DYNAMICS_
@@ -47,7 +48,7 @@ const std::vector<std::uint_fast8_t> lower_region = {0b00000010, 0b00000101, 0b0
 
 class DeltaController {
  public:
-  DeltaController(ros::NodeHandle&,double);
+  DeltaController(const Yaml::Node& cfg, double dt);
   ~DeltaController(){};
 
   void initialize(const double& r_B, const double& r_T, const double& l_P, const double& l_D,
@@ -88,14 +89,11 @@ class DeltaController {
 
   double dGain() { return params_->d_gain(); };
 
-  Eigen::Vector3d getParamVector3(const std::string& param_name, const Eigen::Vector3d& default_value);
-  Eigen::Quaterniond getParamQuat(const std::string& param_name, const Eigen::Quaterniond& default_value);
-
-  void deltaCommandCb(const mav_msgs::Actuators &msg);
+  Eigen::Vector3d getParamVector3(const std::string& param_name);
+  Eigen::Quaterniond getParamQuat(const std::string& param_name);
 
   void sendActuatorsCommand(const Eigen::Vector3d jointsPos);
   void sendActuatorsCommand();
-  void publishJointStates();
 
   void updateState(const Eigen::Quaterniond& base_q_WB, const Eigen::Vector3d& base_vel_B,
                    const Eigen::Vector3d& base_angvel_B, const Eigen::VectorXd& q_in,
@@ -177,6 +175,8 @@ class DeltaController {
   std::shared_ptr<delta_control::DeltaRef> reference_;
   Eigen::Vector3d prev_q_cmd_;
 
+  Yaml::Node cfg_;
+
   Eigen::Vector3d pos_error_integrator_;
   Eigen::Vector3d q_error_integrator_;
   double pos_error_integrator_max_;
@@ -195,10 +195,6 @@ class DeltaController {
   Iir::Butterworth::LowPass<2> base_force_butterworth_[3];
   Iir::Butterworth::LowPass<2> base_torque_butterworth_[3];
   std::vector<raisim_actuators::delta_joint*> joints_;
-  ros::NodeHandle pnh_;
-  ros::Subscriber delta_command_sub_;
-  ros::Publisher delta_state_pub_;
-  ros::Publisher base_wrench_pub_;
   double sample_time_;
   Eigen::Vector3d joints_command_;
 };

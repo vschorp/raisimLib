@@ -1,0 +1,14 @@
+double t2 = xd*2.0;
+double t3 = yd*2.0;
+double t4 = zd*2.0;
+double t5 = t2+t3;
+double t6 = t2+t4;
+A0(0,0) = t2;
+A0(0,1) = t5;
+A0(0,2) = t6;
+A0(1,0) = t2;
+A0(1,1) = t5;
+A0(1,2) = t6;
+A0(2,0) = t2;
+A0(2,1) = t5;
+A0(2,2) = t6;
