@@ -50,7 +50,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_); gv_init_.setZero(gvDim_);
 //    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
-    sampling_time_ = cfg["control_dt"].template As<float>();
+    control_dt_ = cfg["control_dt"].template As<float>();
+    simulation_dt_ = cfg["simulation_dt"].template As<float>();
 
     /// Initialisation Parameters
     initialDistanceOffset_ = cfg["initialisation"]["distanceOffset"].template As<float>();
@@ -85,8 +86,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     terminalSuccessAngularVel_ = cfg["termination"]["success"]["angularVelDeg"].template As<float>() / 180.0 * M_PI;
 
     // Add sensors
-    auto* odometry_noise = new raisim_sensors::odometryNoise(sampling_time_, cfg["odometryNoise"]);
-    odometry_ = raisim_sensors::odometry(ouzel_, sampling_time_, "ouzel", "ouzel/base_link", odometry_noise);
+    auto* odometry_noise = new raisim_sensors::odometryNoise(control_dt_, cfg["odometryNoise"]);
+    odometry_ = raisim_sensors::odometry(ouzel_, control_dt_, "ouzel", "ouzel/base_link", odometry_noise);
 
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
@@ -182,7 +183,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr);
 
     mav_msgs::EigenTorqueThrust wrench_command;
-    controller_.calculateWrenchCommand(&wrench_command, sampling_time_);
+    controller_.calculateWrenchCommand(&wrench_command, control_dt_);
 //    std::cout << "commanded thrust:\n" << wrench_command.thrust << "\n" << "commanded torque:\n" << wrench_command.torque << std::endl;
 
 //    std::cout << "base link idx: " << ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
@@ -236,7 +237,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     bodyLinearVel_ = odometry_measurement.segment(7, 3);
     bodyAngularVel_ = odometry_measurement.segment(10, 3);
 
-    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeas();
+    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
     position_W_gt_ = odometry_measurement_gt.segment(0, 3);
     orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6)).normalized();
     bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
@@ -369,13 +370,10 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void computeErrorMetrics(double& waypointDist, double& errorAngle) {
     // Maybe want to clamp the error terms?
-    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
-    Eigen::Vector3d position_W_gt = odometry_measurement_gt.segment(0, 3);
-    waypointDist = (position_W_gt - ref_position_).squaredNorm();
+    waypointDist = (position_W_gt_ - ref_position_).squaredNorm();
 
 //    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
-    Eigen::Quaterniond orientation_W_B_gt(odometry_measurement_gt(3), odometry_measurement_gt(4), odometry_measurement_gt(5), odometry_measurement_gt(6));
-    errorAngle = orientation_W_B_gt.angularDistance(ref_orientation_);
+    errorAngle = orientation_W_B_gt_.angularDistance(ref_orientation_);
   }
 
   Eigen::Quaterniond QuaternionFromTwoVectors(Eigen::Vector3d _orientation_vec_1, Eigen::Vector3d _orientation_vec_2) {
@@ -417,7 +415,6 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
   Eigen::Quaterniond orientation_W_B_gt_;
   std::set<size_t> footIndices_;
-  double sampling_time_;
   Eigen::Vector3d ref_position_;
   Eigen::Quaterniond ref_orientation_;
 
