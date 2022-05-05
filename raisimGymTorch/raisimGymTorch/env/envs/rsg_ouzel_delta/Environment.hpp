@@ -244,6 +244,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
     bodyAngularVel_gt_ = odometry_measurement_gt.segment(10, 3);
 
+    delta_joint_angle_ = delta_sym_->getqPos();
+    delta_joint_angular_vel_ = delta_sym_->getqVel();
+
     ouzel_->getState(gc_, gv_);
 
 //    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
@@ -254,6 +257,9 @@ class ENVIRONMENT : public RaisimGymEnv {
 
 //    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
 //    std::cout << "odometry_measurement gt: " << odometry_measurement_gt << std::endl;
+
+    std::cout << "delta_joint_angle_: " << delta_joint_angle_ << std::endl;
+    std::cout << "delta_joint_angular_vel_: " << delta_joint_angular_vel_ << std::endl;
 
     if (!Eigen::isfinite(gc_.array()).all()) {
       std::cout << "ob is nan!!" << std::endl;
