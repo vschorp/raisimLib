@@ -164,9 +164,15 @@ class VectorizedEnvironment {
       obCount_ = totCount;
     }
 
+//    std::cout << "ob before normalisation: " << ob << std::endl;
+//    std::cout << "normalisation mean: " << obMean_ << std::endl;
+//    std::cout << "normalisation var: " << obVar_ << std::endl;
+
     #pragma omp parallel for schedule(auto)
     for(int i=0; i<num_envs_; i++)
       ob.row(i) = (ob.row(i) - obMean_.transpose()).template cwiseQuotient<>((obVar_ + epsilon).cwiseSqrt().transpose());
+
+//    std::cout << "ob after normalisation: " << ob << std::endl;
   }
 
   inline void perAgentStep(int agentId,

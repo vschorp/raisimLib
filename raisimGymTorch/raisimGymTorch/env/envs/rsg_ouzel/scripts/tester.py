@@ -69,7 +69,7 @@ else:
     loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)['actor_architecture_state_dict'])
 
-    # env.load_scaling(weight_dir, int(iteration_number))
+    env.load_scaling(weight_dir, int(iteration_number))
     env.turn_on_visualization()
 
     # max_steps = 1000000
@@ -82,6 +82,7 @@ else:
         if visualize_simulation:
             time.sleep(0.01)
         obs = env.observe(False)
+        # print("obs:")
         # print(obs)
         action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         # action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0]])
