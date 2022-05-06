@@ -2,12 +2,11 @@ seed: 1
 record_video: yes
 activation: tanh
 on_cluster: True
-learning_rate: 5e-3
+learning_rate: 5e-4
 use_adaptive_lr: False
 
 environment:
   render: False
-# just testing commenting
   num_envs: 26 #26
   eval_every_n: 1000 #200
   num_threads: 30 #30
@@ -37,8 +36,8 @@ environment:
   initialisation:
     distanceOffset: 1.5 #1.5
     angleOffsetDeg: 45.0 #45.0
-    linearVel: 0.2 #0.1
-    angularVelDeg: 5.0 #5.0
+    linearVel: 2.0 #0.1
+    angularVelDeg: 270.0 #5.0
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0

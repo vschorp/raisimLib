@@ -43,8 +43,8 @@ class EvaluationVisualizer:
         body_orient_W = Rotation.from_matrix(body_orient_mat_W)
         body_linear_vel_W = obs_orig[0][12:15]
         body_angular_vel_W = obs_orig[0][15:18]
-        ref_pos_W = obs_orig[0][18:21]
-        ref_orient_mat_W = np.vstack([obs_orig[0][21:24], obs_orig[0][24:27], obs_orig[0][27:30]]).transpose()
+        # ref_pos_W = obs_orig[0][18:21]
+        ref_orient_mat_W = np.vstack([obs_orig[0][18:21], obs_orig[0][21:24], obs_orig[0][24:27]]).transpose()
         ref_orient_W = Rotation.from_matrix(ref_orient_mat_W)
 
         error_rotation = body_orient_W.inv() * ref_orient_W
@@ -56,7 +56,7 @@ class EvaluationVisualizer:
         self.body_orient_quat_W_all[step, :] = body_orient_W.as_quat()
         self.body_linear_vel_W_all[step, :] = body_linear_vel_W
         self.body_angular_vel_W_all[step, :] = body_angular_vel_W
-        self.ref_pos_W_all[step, :] = ref_pos_W
+        # self.ref_pos_W_all[step, :] = ref_pos_W
         self.ref_orient_quat_W_all[step, :] = ref_orient_W.as_quat()
         self.error_angle[step, :] = error_rotation.magnitude()
 
@@ -87,12 +87,15 @@ class EvaluationVisualizer:
         plt.plot(self.body_pos_W_all[:, 0], 'r-', label='body_pos_W_all_x')
         plt.plot(self.body_pos_W_all[:, 1], 'g-',label='body_pos_W_all_y')
         plt.plot(self.body_pos_W_all[:, 2], 'b-', label='body_pos_W_all_z')
-        plt.plot(self.ref_pos_W_all[:, 0], 'r--', label='ref_pos_W_all_x')
-        plt.plot(self.ref_pos_W_all[:, 1], 'g--', label='ref_pos_W_all_y')
-        plt.plot(self.ref_pos_W_all[:, 2], 'b--', label='ref_pos_W_all_z')
-        plt.plot(self.ref_pos_W_all[:, 0] + self.action_lin_corr_all[:, 0], 'r*', label='ref_corr_pos_W_all_x')
-        plt.plot(self.ref_pos_W_all[:, 1] + self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
-        plt.plot(self.ref_pos_W_all[:, 2] + self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
+        # plt.plot(self.ref_pos_W_all[:, 0], 'r--', label='ref_pos_W_all_x')
+        # plt.plot(self.ref_pos_W_all[:, 1], 'g--', label='ref_pos_W_all_y')
+        # plt.plot(self.ref_pos_W_all[:, 2], 'b--', label='ref_pos_W_all_z')
+        # plt.plot(self.ref_pos_W_all[:, 0] + self.action_lin_corr_all[:, 0], 'r*', label='ref_corr_pos_W_all_x')
+        # plt.plot(self.ref_pos_W_all[:, 1] + self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
+        # plt.plot(self.ref_pos_W_all[:, 2] + self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
+        plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_corr_pos_W_all_x')
+        plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
+        plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
         plt.legend()
         plt.savefig(self.save_path + "pos.png")
 
@@ -147,7 +150,8 @@ class EvaluationVisualizer:
         plt.savefig(self.save_path + "angular_vel.png")
 
         plt.figure(figsize=[20, 10])
-        plt.plot(np.linalg.norm(self.body_pos_W_all - self.ref_pos_W_all, axis=1), 'r-', label='pos_W_error')
+        # plt.plot(np.linalg.norm(self.body_pos_W_all - self.ref_pos_W_all, axis=1), 'r-', label='pos_W_error')
+        plt.plot(np.linalg.norm(self.body_pos_W_all, axis=1), 'r-', label='pos_W_error')
         #TODO: fix angle error plot
 
         # body_orient_W_all = Rotation.from_quat(self.body_orient_quat_W_all)

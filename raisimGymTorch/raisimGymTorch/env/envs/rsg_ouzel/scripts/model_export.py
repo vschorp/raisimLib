@@ -18,11 +18,11 @@ parser.add_argument('-c', '--config', help='config file name', type=str, default
 args = parser.parse_args()
 
 # directories
-task_path = os.path.dirname(os.path.realpath(__file__))
+task_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 home_path = task_path + "/../../../../.."
 
 # config
-config_fpath = os.path.join(task_path, args.config)
+config_fpath = os.path.join(task_path, "config", args.config)
 print(f"loading config file {config_fpath}")
 cfg = YAML().load(open(config_fpath, 'r'))
 
@@ -69,7 +69,7 @@ else:
     loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], activation, ob_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)['actor_architecture_state_dict'])
 
-    example_input = torch.rand(1, 30)
+    example_input = torch.rand(1, ob_dim)
     traced_script_module = torch.jit.trace(loaded_graph.architecture, example_input)
     output_fname = os.path.join(weight_dir, "trained_model.pt")
     traced_script_module.save(output_fname)
@@ -84,4 +84,4 @@ else:
     var_save_fname = os.path.join(weight_dir, "trained_var.csv")
     np.savetxt(mean_save_fname, means)
     np.savetxt(var_save_fname, vars)
-    print(f"saved means to {mean_save_fname}")
+    print(f"saved means to {me  an_save_fname}")
