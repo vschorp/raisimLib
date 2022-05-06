@@ -2,7 +2,6 @@ from ruamel.yaml import YAML, dump, RoundTripDumper
 from raisimGymTorch.env.bin import rsg_ouzel
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymTorch.algo.ppo.module as ppo_module
-from raisimGymTorch.helper.output_helper import EvaluationVisualizer
 import os
 import math
 import time
@@ -84,4 +83,4 @@ else:
     var_save_fname = os.path.join(weight_dir, "trained_var.csv")
     np.savetxt(mean_save_fname, means)
     np.savetxt(var_save_fname, vars)
-    print(f"saved means to {me  an_save_fname}")
+    print(f"saved means to {mean_save_fname}")
