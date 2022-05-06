@@ -3,11 +3,10 @@ record_video: yes
 activation: tanh
 on_cluster: True
 learning_rate: 5e-4
-use_adaptive_lr: False
+use_adaptive_lr: True
 
 environment:
-  render: True
-# just testing commenting
+  render: False
   num_envs: 26 #26
   eval_every_n: 1000 #200
   num_threads: 30 #30
@@ -29,11 +28,11 @@ environment:
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 1000.0
+      reward: 100.0
       waypointDist: 0.05
-      angleErrorDeg: 3.0
+      angleErrorDeg: 5.0
       linearVel: 0.01
-      angularVelDeg: 1.0
+      angularVelDeg: 0.1
   initialisation:
     distanceOffset: 1.5 #1.5
     angleOffsetDeg: 45.0 #45.0
