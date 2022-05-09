@@ -22,7 +22,7 @@ class RaisimGymEnv {
 
  public:
   explicit RaisimGymEnv (std::string resourceDir, const Yaml::Node& cfg) :
-      resourceDir_(std::move(resourceDir)), cfg_(cfg) { }
+      resourceDir_(std::move(resourceDir)), cfg_(cfg) {}
 
   virtual ~RaisimGymEnv() { if(server_) server_->killServer(); };
 

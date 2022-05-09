@@ -81,7 +81,7 @@ set_target_properties(raisim::raisimODE PROPERTIES
 )
 
 # Create imported target raisim::raisim
-add_library(raisim::raisim SHARED IMPORTED)
+add_library(raisim::raisim SHARED IMPORTED ../../../../../raisimGymTorch/raisimGymTorch/env/envs/rsg_ouzel/impedance_control_module.cpp)
 
 set_target_properties(raisim::raisim PROPERTIES
   INTERFACE_COMPILE_FEATURES "cxx_std_11"

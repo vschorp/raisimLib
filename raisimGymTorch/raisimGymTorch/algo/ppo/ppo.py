@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from .storage import RolloutStorage
+import numpy as np
 
 
 class PPO:
@@ -62,6 +63,7 @@ class PPO:
         self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         self.tot_timesteps = 0
         self.tot_time = 0
+        self.reward_ll_sum = 0
 
         # ADAM
         self.learning_rate = learning_rate
@@ -82,6 +84,7 @@ class PPO:
     def step(self, value_obs, rews, dones):
         self.storage.add_transitions(self.actor_obs, value_obs, self.actions, self.actor.action_mean, self.actor.distribution.std_np, rews, dones,
                                      self.actions_log_prob)
+        self.reward_ll_sum = self.reward_ll_sum + np.sum(rews)
 
     def update(self, actor_obs, value_obs, log_this_iteration, update):
         last_values = self.critic.predict(torch.from_numpy(value_obs).to(self.device))
@@ -94,13 +97,17 @@ class PPO:
         if log_this_iteration:
             self.log({**locals(), **infos, 'it': update})
 
+        self.reward_ll_sum = 0
+
     def log(self, variables):
-        self.tot_timesteps += self.num_transitions_per_env * self.num_envs
+        tot_timesteps_per_epoch = self.num_transitions_per_env * self.num_envs
+        self.tot_timesteps += tot_timesteps_per_epoch
         mean_std = self.actor.distribution.std.mean()
         self.writer.add_scalar('PPO/value_function', variables['mean_value_loss'], variables['it'])
         self.writer.add_scalar('PPO/surrogate', variables['mean_surrogate_loss'], variables['it'])
         self.writer.add_scalar('PPO/mean_noise_std', mean_std.item(), variables['it'])
         self.writer.add_scalar('PPO/learning_rate', self.learning_rate, variables['it'])
+        self.writer.add_scalar('PPO/avg_reward', self.reward_ll_sum / tot_timesteps_per_epoch, variables['it'])
 
     def _train_step(self, log_this_iteration):
         mean_value_loss = 0

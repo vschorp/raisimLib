@@ -72,14 +72,15 @@ find_package(raisim CONFIG REQUIRED)
 #######################
 ### src and linking ###
 #######################
-SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
+set(SUBDIRS rsg_ouzel)
+#SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
 set(RAISIMGYM_ENV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
 
 ######## Env ##########
 FOREACH(subdir ${SUBDIRS})
-    pybind11_add_module(${subdir} raisimGymTorch/env/raisim_gym.cpp raisimGymTorch/env/Yaml.cpp)
+    pybind11_add_module(${subdir} raisimGymTorch/env/raisim_gym.cpp raisimGymTorch/env/Yaml.cpp raisimGymTorch/env/envs/rsg_ouzel/src/impedance_control_module.cpp raisimGymTorch/env/envs/rsg_ouzel/src/sensors.cpp)
     target_link_libraries(${subdir} PRIVATE raisim::raisim ${Dependencies})
-    target_include_directories(${subdir} PUBLIC ${EIGEN3_INCLUDE_DIRS} ${RAISIMGYM_ENV_DIR}/${subdir} ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env)
+    target_include_directories(${subdir} PUBLIC ${EIGEN3_INCLUDE_DIRS} ${RAISIMGYM_ENV_DIR}/${subdir} ${RAISIMGYM_ENV_DIR}/${subdir}/include ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env)
     target_compile_options(${subdir} PRIVATE -fPIC -O3 -flto -mno-avx2)
     target_compile_definitions(${subdir} PRIVATE "-DRAISIMGYM_TORCH_ENV_NAME=${subdir}")
     target_compile_definitions(${subdir} PRIVATE "$<$<CONFIG:Release>:EIGEN_NO_DEBUG>")
@@ -97,9 +98,9 @@ FOREACH(subdir ${SUBDIRS})
 
     if (CMAKE_BUILD_TYPE STREQUAL "DEBUG" OR CMAKE_BUILD_TYPE STREQUAL "Debug")
         message("[RAISIM_GYM] BUILDING THE DEBUG APP for ${subdir}")
-        add_executable(${subdir}_debug_app raisimGymTorch/env/debug_app.cpp raisimGymTorch/env/Yaml.cpp)
+        add_executable(${subdir}_debug_app raisimGymTorch/env/debug_app.cpp raisimGymTorch/env/Yaml.cpp raisimGymTorch/env/envs/rsg_ouzel/src/impedance_control_module.cpp raisimGymTorch/env/envs/rsg_ouzel/src/sensors.cpp)
         target_link_libraries(${subdir}_debug_app PRIVATE raisim::raisim)
-        target_include_directories(${subdir}_debug_app PUBLIC raisimGymTorch/env/envs/${subdir} ${EIGEN3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env)
+        target_include_directories(${subdir}_debug_app PUBLIC raisimGymTorch/env/envs/${subdir} raisimGymTorch/env/envs/${subdir}/include ${EIGEN3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env)
         if(WIN32)
             target_link_libraries(${subdir}_debug_app PRIVATE Ws2_32)
         else()
