@@ -10,18 +10,19 @@
 #ifndef DELTA_CONTROL_KINEMATICS_H
 #define DELTA_CONTROL_KINEMATICS_H
 
-#include <Eigen/Core>
 #include "controller_helpers.h"
+#include <Eigen/Core>
 
 namespace delta_control {
 
 class Kinematics {
- public:
+public:
   Kinematics(std::shared_ptr<DeltaControllerParameters> params)
       : params_(params){};
   ~Kinematics(){};
 
-  void A_mat(Eigen::Matrix3d* A, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee) {
+  void A_mat(Eigen::Matrix3d *A, const Eigen::Vector3d &q,
+             const Eigen::Vector3d &x_ee) {
     assert(A);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -38,7 +39,8 @@ class Kinematics {
     *A = A0;
   }
 
-  void B_mat(Eigen::Matrix3d* B, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee) {
+  void B_mat(Eigen::Matrix3d *B, const Eigen::Vector3d &q,
+             const Eigen::Vector3d &x_ee) {
     assert(B);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -55,8 +57,8 @@ class Kinematics {
     *B = A0;
   }
 
-  void dAdq_mat(Eigen::Matrix3d* dAdq, const Eigen::Vector3d& q, const Eigen::Vector3d& qd,
-                const Eigen::Vector3d& x_ee) {
+  void dAdq_mat(Eigen::Matrix3d *dAdq, const Eigen::Vector3d &q,
+                const Eigen::Vector3d &qd, const Eigen::Vector3d &x_ee) {
     assert(dAdq);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -76,8 +78,8 @@ class Kinematics {
     *dAdq = A0;
   }
 
-  void dBdq_mat(Eigen::Matrix3d* dBdq, const Eigen::Vector3d& q, const Eigen::Vector3d& qd,
-                const Eigen::Vector3d& x_ee) {
+  void dBdq_mat(Eigen::Matrix3d *dBdq, const Eigen::Vector3d &q,
+                const Eigen::Vector3d &qd, const Eigen::Vector3d &x_ee) {
     assert(dBdq);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -97,8 +99,8 @@ class Kinematics {
     *dBdq = A0;
   }
 
-  void dAdx_mat(Eigen::Matrix3d* dAdx, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee,
-                const Eigen::Vector3d& xd_ee) {
+  void dAdx_mat(Eigen::Matrix3d *dAdx, const Eigen::Vector3d &q,
+                const Eigen::Vector3d &x_ee, const Eigen::Vector3d &xd_ee) {
     assert(dAdx);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -118,8 +120,8 @@ class Kinematics {
     *dAdx = A0;
   }
 
-  void dBdx_mat(Eigen::Matrix3d* dBdx, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee,
-                const Eigen::Vector3d& xd_ee) {
+  void dBdx_mat(Eigen::Matrix3d *dBdx, const Eigen::Vector3d &q,
+                const Eigen::Vector3d &x_ee, const Eigen::Vector3d &xd_ee) {
     assert(dBdx);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -139,7 +141,8 @@ class Kinematics {
     *dBdx = A0;
   }
 
-  void jacInv(Eigen::Matrix3d* J_inv, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee) {
+  void jacInv(Eigen::Matrix3d *J_inv, const Eigen::Vector3d &q,
+              const Eigen::Vector3d &x_ee) {
     assert(J_inv);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -156,7 +159,8 @@ class Kinematics {
     *J_inv = A0;
   }
 
-  void jac(Eigen::Matrix3d* J, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee) {
+  void jac(Eigen::Matrix3d *J, const Eigen::Vector3d &q,
+           const Eigen::Vector3d &x_ee) {
     assert(J);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -173,9 +177,9 @@ class Kinematics {
     *J = A0;
   }
 
-  void djacInv(Eigen::Vector3d* qdd, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee,
-               const Eigen::Vector3d& qd, const Eigen::Vector3d& xd_ee,
-               const Eigen::Vector3d& xdd_ee) {
+  void djacInv(Eigen::Vector3d *qdd, const Eigen::Vector3d &q,
+               const Eigen::Vector3d &x_ee, const Eigen::Vector3d &qd,
+               const Eigen::Vector3d &xd_ee, const Eigen::Vector3d &xdd_ee) {
     assert(qdd);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -201,8 +205,9 @@ class Kinematics {
     *qdd = A0;
   }
 
-  void djac(Eigen::Vector3d* xdd_ee, const Eigen::Vector3d& q, const Eigen::Vector3d& x_ee,
-            const Eigen::Vector3d& qd, const Eigen::Vector3d& xd_ee, const Eigen::Vector3d& qdd) {
+  void djac(Eigen::Vector3d *xdd_ee, const Eigen::Vector3d &q,
+            const Eigen::Vector3d &x_ee, const Eigen::Vector3d &qd,
+            const Eigen::Vector3d &xd_ee, const Eigen::Vector3d &qdd) {
     assert(xdd_ee);
     double x = x_ee(0);
     double y = x_ee(1);
@@ -228,11 +233,11 @@ class Kinematics {
     *xdd_ee = A0;
   }
 
- private:
+private:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   std::shared_ptr<DeltaControllerParameters> params_;
 };
 
-}  // namespace delta_control
+} // namespace delta_control
 
-#endif  // DELTA_CONTROL_KINEMATICS_H
+#endif // DELTA_CONTROL_KINEMATICS_H

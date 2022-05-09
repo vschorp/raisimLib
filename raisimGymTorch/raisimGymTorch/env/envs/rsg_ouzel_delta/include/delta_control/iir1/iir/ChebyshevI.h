@@ -7,7 +7,7 @@
  * https://github.com/berndporr/iir1
  *
  * See Documentation.txt for contact information, notes, and bibliography.
- * 
+ *
  * -----------------------------------------------------------------
  *
  * License: MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -36,8 +36,8 @@
 #ifndef IIR1_CHEBYSHEVI_H
 #define IIR1_CHEBYSHEVI_H
 
-#include "Common.h"
 #include "Cascade.h"
+#include "Common.h"
 #include "PoleFilter.h"
 #include "State.h"
 
@@ -51,13 +51,11 @@ namespace ChebyshevI {
 
 // Half-band analog prototypes (s-plane)
 
-class DllExport AnalogLowPass : public LayoutBase
-{
+class DllExport AnalogLowPass : public LayoutBase {
 public:
-  AnalogLowPass ();
+  AnalogLowPass();
 
-  void design (const int numPoles,
-               double rippleDb);
+  void design(const int numPoles, double rippleDb);
 
 private:
   int m_numPoles;
@@ -66,14 +64,11 @@ private:
 
 //------------------------------------------------------------------------------
 
-class DllExport AnalogLowShelf : public LayoutBase
-{
+class DllExport AnalogLowShelf : public LayoutBase {
 public:
-  AnalogLowShelf ();
+  AnalogLowShelf();
 
-  void design (int numPoles,
-               double gainDb,
-               double rippleDb);
+  void design(int numPoles, double gainDb, double rippleDb);
 
 private:
   int m_numPoles;
@@ -85,66 +80,39 @@ private:
 
 // Factored implementations to reduce template instantiations
 
-struct DllExport LowPassBase : PoleFilterBase <AnalogLowPass>
-{
-  void setup (int order,
-              double sampleRate,
-              double cutoffFrequency,
-              double rippleDb);
+struct DllExport LowPassBase : PoleFilterBase<AnalogLowPass> {
+  void setup(int order, double sampleRate, double cutoffFrequency,
+             double rippleDb);
 };
 
-struct DllExport HighPassBase : PoleFilterBase <AnalogLowPass>
-{
-  void setup (int order,
-              double sampleRate,
-              double cutoffFrequency,
-              double rippleDb);
+struct DllExport HighPassBase : PoleFilterBase<AnalogLowPass> {
+  void setup(int order, double sampleRate, double cutoffFrequency,
+             double rippleDb);
 };
 
-struct DllExport BandPassBase : PoleFilterBase <AnalogLowPass>
-{
-  void setup (int order,
-              double sampleRate,
-              double centerFrequency,
-              double widthFrequency,
-              double rippleDb);
+struct DllExport BandPassBase : PoleFilterBase<AnalogLowPass> {
+  void setup(int order, double sampleRate, double centerFrequency,
+             double widthFrequency, double rippleDb);
 };
 
-struct DllExport BandStopBase : PoleFilterBase <AnalogLowPass>
-{
-  void setup (int order,
-              double sampleRate,
-              double centerFrequency,
-              double widthFrequency,
-              double rippleDb);
+struct DllExport BandStopBase : PoleFilterBase<AnalogLowPass> {
+  void setup(int order, double sampleRate, double centerFrequency,
+             double widthFrequency, double rippleDb);
 };
 
-struct DllExport LowShelfBase : PoleFilterBase <AnalogLowShelf>
-{
-  void setup (int order,
-              double sampleRate,
-              double cutoffFrequency,
-              double gainDb,
-              double rippleDb);
+struct DllExport LowShelfBase : PoleFilterBase<AnalogLowShelf> {
+  void setup(int order, double sampleRate, double cutoffFrequency,
+             double gainDb, double rippleDb);
 };
 
-struct DllExport HighShelfBase : PoleFilterBase <AnalogLowShelf>
-{
-  void setup (int order,
-              double sampleRate,
-              double cutoffFrequency,
-              double gainDb,
-              double rippleDb);
+struct DllExport HighShelfBase : PoleFilterBase<AnalogLowShelf> {
+  void setup(int order, double sampleRate, double cutoffFrequency,
+             double gainDb, double rippleDb);
 };
 
-struct DllExport BandShelfBase : PoleFilterBase <AnalogLowShelf>
-{
-  void setup (int order,
-              double sampleRate,
-              double centerFrequency,
-              double widthFrequency,
-              double gainDb,
-              double rippleDb);
+struct DllExport BandShelfBase : PoleFilterBase<AnalogLowShelf> {
+  void setup(int order, double sampleRate, double centerFrequency,
+             double widthFrequency, double gainDb, double rippleDb);
 };
 
 //------------------------------------------------------------------------------
@@ -159,41 +127,31 @@ struct DllExport BandShelfBase : PoleFilterBase <AnalogLowShelf>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  */
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport LowPass : PoleFilter <LowPassBase, StateType, FilterOrder>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double rippleDb) {
-			LowPassBase::setup (FilterOrder,
-					    sampleRate,
-					    cutoffFrequency,
-					    rippleDb);
-		}
-		
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double cutoffFrequency,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			LowPassBase::setup (reqOrder,
-					    sampleRate,
-					    cutoffFrequency,
-					    rippleDb);
-		}
-	};
+struct DllExport LowPass : PoleFilter<LowPassBase, StateType, FilterOrder> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double rippleDb) {
+    LowPassBase::setup(FilterOrder, sampleRate, cutoffFrequency, rippleDb);
+  }
+
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(int reqOrder, double sampleRate, double cutoffFrequency,
+             double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    LowPassBase::setup(reqOrder, sampleRate, cutoffFrequency, rippleDb);
+  }
+};
 
 /**
  * ChebyshevI highpass filter
@@ -201,41 +159,31 @@ template <int FilterOrder, class StateType = DEFAULT_STATE>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  */
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport HighPass : PoleFilter <HighPassBase, StateType, FilterOrder>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double rippleDb) {
-			HighPassBase::setup (FilterOrder,
-					     sampleRate,
-					     cutoffFrequency,
-					     rippleDb);
-		}
+struct DllExport HighPass : PoleFilter<HighPassBase, StateType, FilterOrder> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double rippleDb) {
+    HighPassBase::setup(FilterOrder, sampleRate, cutoffFrequency, rippleDb);
+  }
 
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double cutoffFrequency,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			HighPassBase::setup (reqOrder,
-					     sampleRate,
-					     cutoffFrequency,
-					     rippleDb);
-		}
-	};
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(int reqOrder, double sampleRate, double cutoffFrequency,
+             double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    HighPassBase::setup(reqOrder, sampleRate, cutoffFrequency, rippleDb);
+  }
+};
 
 /**
  * ChebyshevI bandpass filter
@@ -243,47 +191,37 @@ template <int FilterOrder, class StateType = DEFAULT_STATE>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  */
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport BandPass : PoleFilter <BandPassBase, StateType, FilterOrder, FilterOrder*2>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the bandpass
-                 * \param widthFrequency Frequency with of the passband
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-      		void setup (double sampleRate,
-			    double centerFrequency,
-			    double widthFrequency,
-			    double rippleDb) {
-			BandPassBase::setup (FilterOrder,
-			       sampleRate,
-			       centerFrequency,
-			       widthFrequency,
-			       rippleDb);
-		}
+struct DllExport BandPass
+    : PoleFilter<BandPassBase, StateType, FilterOrder, FilterOrder * 2> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the bandpass
+   * \param widthFrequency Frequency with of the passband
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(double sampleRate, double centerFrequency, double widthFrequency,
+             double rippleDb) {
+    BandPassBase::setup(FilterOrder, sampleRate, centerFrequency,
+                        widthFrequency, rippleDb);
+  }
 
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the bandpass
-                 * \param widthFrequency Frequency with of the passband
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double centerFrequency,
-			    double widthFrequency,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			BandPassBase::setup (reqOrder,
-			       sampleRate,
-			       centerFrequency,
-			       widthFrequency,
-			       rippleDb);
-		}
-	};
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the bandpass
+   * \param widthFrequency Frequency with of the passband
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(int reqOrder, double sampleRate, double centerFrequency,
+             double widthFrequency, double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    BandPassBase::setup(reqOrder, sampleRate, centerFrequency, widthFrequency,
+                        rippleDb);
+  }
+};
 
 /**
  * ChebyshevI bandstop filter
@@ -291,48 +229,37 @@ template <int FilterOrder, class StateType = DEFAULT_STATE>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  */
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport BandStop : PoleFilter <BandStopBase, StateType, FilterOrder, FilterOrder*2>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the notch
-                 * \param widthFrequency Frequency with of the notch
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double widthFrequency,
-			    double rippleDb) {
-			BandStopBase::setup (FilterOrder,
-					     sampleRate,
-					     centerFrequency,
-					     widthFrequency,
-					     rippleDb);
-		}
+struct DllExport BandStop
+    : PoleFilter<BandStopBase, StateType, FilterOrder, FilterOrder * 2> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the notch
+   * \param widthFrequency Frequency with of the notch
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(double sampleRate, double centerFrequency, double widthFrequency,
+             double rippleDb) {
+    BandStopBase::setup(FilterOrder, sampleRate, centerFrequency,
+                        widthFrequency, rippleDb);
+  }
 
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the notch
-                 * \param widthFrequency Frequency with of the notch
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double centerFrequency,
-			    double widthFrequency,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			BandStopBase::setup (reqOrder,
-					     sampleRate,
-					     centerFrequency,
-					     widthFrequency,
-					     rippleDb);
-		}
-
-	};
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the notch
+   * \param widthFrequency Frequency with of the notch
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(int reqOrder, double sampleRate, double centerFrequency,
+             double widthFrequency, double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    BandStopBase::setup(reqOrder, sampleRate, centerFrequency, widthFrequency,
+                        rippleDb);
+  }
+};
 
 /**
  * ChebyshevI low shelf filter. Specified gain in the passband. Otherwise 0 dB.
@@ -340,47 +267,36 @@ template <int FilterOrder, class StateType = DEFAULT_STATE>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  **/
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport LowShelf : PoleFilter <LowShelfBase, StateType, FilterOrder>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param gainDb Gain in the passband
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double gainDb,
-			    double rippleDb) {
-			LowShelfBase::setup (FilterOrder,
-					     sampleRate,
-					     cutoffFrequency,
-					     gainDb,
-					     rippleDb);
-		}
-	
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param gainDb Gain in the passband
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double cutoffFrequency,
-			    double gainDb,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			LowShelfBase::setup (reqOrder,
-					     sampleRate,
-					     cutoffFrequency,
-					     gainDb,
-					     rippleDb);
-		}
-	};
+struct DllExport LowShelf : PoleFilter<LowShelfBase, StateType, FilterOrder> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param gainDb Gain in the passband
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double gainDb,
+             double rippleDb) {
+    LowShelfBase::setup(FilterOrder, sampleRate, cutoffFrequency, gainDb,
+                        rippleDb);
+  }
+
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param gainDb Gain in the passband
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(int reqOrder, double sampleRate, double cutoffFrequency,
+             double gainDb, double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    LowShelfBase::setup(reqOrder, sampleRate, cutoffFrequency, gainDb,
+                        rippleDb);
+  }
+};
 
 /**
  * ChebyshevI high shelf filter. Specified gain in the passband. Otherwise 0 dB.
@@ -388,48 +304,36 @@ template <int FilterOrder, class StateType = DEFAULT_STATE>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  **/
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport HighShelf : PoleFilter <HighShelfBase, StateType, FilterOrder>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param gainDb Gain in the passband
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double gainDb,
-			    double rippleDb) {
-			HighShelfBase::setup (FilterOrder,
-			       sampleRate,
-			       cutoffFrequency,
-			       gainDb,
-			       rippleDb);
-		}
+struct DllExport HighShelf : PoleFilter<HighShelfBase, StateType, FilterOrder> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param gainDb Gain in the passband
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double gainDb,
+             double rippleDb) {
+    HighShelfBase::setup(FilterOrder, sampleRate, cutoffFrequency, gainDb,
+                         rippleDb);
+  }
 
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency.
-                 * \param gainDb Gain in the passband
-                 * \param rippleDb Permitted ripples in dB in the passband
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double cutoffFrequency,
-			    double gainDb,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			HighShelfBase::setup (reqOrder,
-			       sampleRate,
-			       cutoffFrequency,
-			       gainDb,
-			       rippleDb);
-		}
-		
-	};
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency.
+   * \param gainDb Gain in the passband
+   * \param rippleDb Permitted ripples in dB in the passband
+   **/
+  void setup(int reqOrder, double sampleRate, double cutoffFrequency,
+             double gainDb, double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    HighShelfBase::setup(reqOrder, sampleRate, cutoffFrequency, gainDb,
+                         rippleDb);
+  }
+};
 
 /**
  * ChebyshevI bandshelf filter. Specified gain in the passband. Otherwise 0 dB.
@@ -437,59 +341,42 @@ template <int FilterOrder, class StateType = DEFAULT_STATE>
  * \param StateType The filter topology: DirectFormI, DirectFormII, ...
  **/
 template <int FilterOrder, class StateType = DEFAULT_STATE>
-	struct DllExport BandShelf : PoleFilter <BandShelfBase, StateType, FilterOrder, FilterOrder*2>
-	{
-		/**
-		 * Calculates the coefficients of the filter at the order FilterOrder
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the passband
-                 * \param widthFrequency Width of the passband.
-                 * \param gainDb Gain in the passband. The stopband has 0 dB.
-                 * \param rippleDb Permitted ripples in dB in the passband.
-                 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double widthFrequency,
-			    double gainDb,
-			    double rippleDb) {
-			BandShelfBase::setup (FilterOrder,
-					      sampleRate,
-					      centerFrequency,
-					      widthFrequency,
-					      gainDb,
-					      rippleDb);
-			
-		}
-		
-		/**
-		 * Calculates the coefficients of the filter at specified order
-		 * \param reqOrder Actual order for the filter calculations
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the passband
-                 * \param widthFrequency Width of the passband.
-                 * \param gainDb Gain in the passband. The stopband has 0 dB.
-                 * \param rippleDb Permitted ripples in dB in the passband.
-                 **/
-		void setup (int reqOrder,
-			    double sampleRate,
-			    double centerFrequency,
-			    double widthFrequency,
-			    double gainDb,
-			    double rippleDb) {
-			if (reqOrder > FilterOrder) throw std::invalid_argument(orderTooHigh);
-			BandShelfBase::setup (reqOrder,
-					      sampleRate,
-					      centerFrequency,
-					      widthFrequency,
-					      gainDb,
-					      rippleDb);
+struct DllExport BandShelf
+    : PoleFilter<BandShelfBase, StateType, FilterOrder, FilterOrder * 2> {
+  /**
+   * Calculates the coefficients of the filter at the order FilterOrder
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the passband
+   * \param widthFrequency Width of the passband.
+   * \param gainDb Gain in the passband. The stopband has 0 dB.
+   * \param rippleDb Permitted ripples in dB in the passband.
+   **/
+  void setup(double sampleRate, double centerFrequency, double widthFrequency,
+             double gainDb, double rippleDb) {
+    BandShelfBase::setup(FilterOrder, sampleRate, centerFrequency,
+                         widthFrequency, gainDb, rippleDb);
+  }
 
-		}
+  /**
+   * Calculates the coefficients of the filter at specified order
+   * \param reqOrder Actual order for the filter calculations
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the passband
+   * \param widthFrequency Width of the passband.
+   * \param gainDb Gain in the passband. The stopband has 0 dB.
+   * \param rippleDb Permitted ripples in dB in the passband.
+   **/
+  void setup(int reqOrder, double sampleRate, double centerFrequency,
+             double widthFrequency, double gainDb, double rippleDb) {
+    if (reqOrder > FilterOrder)
+      throw std::invalid_argument(orderTooHigh);
+    BandShelfBase::setup(reqOrder, sampleRate, centerFrequency, widthFrequency,
+                         gainDb, rippleDb);
+  }
+};
 
-	};
+} // namespace ChebyshevI
 
-}
-
-}
+} // namespace Iir
 
 #endif

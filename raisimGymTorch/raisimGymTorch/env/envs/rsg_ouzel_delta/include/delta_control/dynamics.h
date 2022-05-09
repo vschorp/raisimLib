@@ -1,8 +1,8 @@
 #ifndef DELTA_CONTROL_DYNAMICS_H
 #define DELTA_CONTROL_DYNAMICS_H
 
-#include <Eigen/Eigen>
 #include "controller_helpers.h"
+#include <Eigen/Eigen>
 
 namespace delta_control {
 
@@ -14,21 +14,32 @@ class Dynamics {
   static constexpr double kDefaultMassPromixalLink = 0.06;
   static constexpr double kDefaultMassPlatform = 0.125;
 
-  const Eigen::Vector3d kDefaultPosBaseToDelta = Eigen::Vector3d(0.0, 0.0, 0.065);
-  const Eigen::Quaterniond kDefaultQBaseToDelta = Eigen::Quaterniond::Identity();
+  const Eigen::Vector3d kDefaultPosBaseToDelta =
+      Eigen::Vector3d(0.0, 0.0, 0.065);
+  const Eigen::Quaterniond kDefaultQBaseToDelta =
+      Eigen::Quaterniond::Identity();
 
-  const Eigen::Vector3d kDefaultIntertiaBase = 1e-6 * Eigen::Vector3d(1581.5, 1269.7, 2825.0);
-  const Eigen::Vector3d kDefaultIntertiaDeltaBase = 1e-6 * Eigen::Vector3d(1696.4, 1696.4, 3059.1);
-  const Eigen::Vector3d kDefaultIntertiaProximalLink = 1e-6 * Eigen::Vector3d(22.0, 801.8, 817.0);
-  const Eigen::Vector3d kDefaultIntertiaPlatform = 1e-6 * Eigen::Vector3d(136.8, 143.9, 254.8);
+  const Eigen::Vector3d kDefaultIntertiaBase =
+      1e-6 * Eigen::Vector3d(1581.5, 1269.7, 2825.0);
+  const Eigen::Vector3d kDefaultIntertiaDeltaBase =
+      1e-6 * Eigen::Vector3d(1696.4, 1696.4, 3059.1);
+  const Eigen::Vector3d kDefaultIntertiaProximalLink =
+      1e-6 * Eigen::Vector3d(22.0, 801.8, 817.0);
+  const Eigen::Vector3d kDefaultIntertiaPlatform =
+      1e-6 * Eigen::Vector3d(136.8, 143.9, 254.8);
 
-  const Eigen::Vector3d kDefaultComOffsetBase = Eigen::Vector3d(0.0, 0.0, 0.003);
-  const Eigen::Vector3d kDefaultComOffsetDeltaBase = Eigen::Vector3d(0.0, 0.0, -0.004);
-  const Eigen::Vector3d kDefaultComOffsetProximalLink = Eigen::Vector3d(0.099, 0.0, 0.0);
-  const Eigen::Vector3d kDefaultComOffsetPlatform = Eigen::Vector3d(0.0, 0.0, 0.0016);
+  const Eigen::Vector3d kDefaultComOffsetBase =
+      Eigen::Vector3d(0.0, 0.0, 0.003);
+  const Eigen::Vector3d kDefaultComOffsetDeltaBase =
+      Eigen::Vector3d(0.0, 0.0, -0.004);
+  const Eigen::Vector3d kDefaultComOffsetProximalLink =
+      Eigen::Vector3d(0.099, 0.0, 0.0);
+  const Eigen::Vector3d kDefaultComOffsetPlatform =
+      Eigen::Vector3d(0.0, 0.0, 0.0016);
 
- public:
-  Dynamics(std::shared_ptr<DeltaControllerParameters> params) : params_(params) {
+public:
+  Dynamics(std::shared_ptr<DeltaControllerParameters> params)
+      : params_(params) {
     force_B_.setZero();
     torque_B_.setZero();
     torque_act_.setZero();
@@ -36,12 +47,13 @@ class Dynamics {
   };
   ~Dynamics(){};
 
-  void updateDynamicParameters(const double& _m_Base, const double& _m_O, const double& _m_A,
-                               const double& _m_P, const Eigen::Vector3d& _I_Base,
-                               const Eigen::Vector3d& _I_O, const Eigen::Vector3d& _I_A,
-                               const Eigen::Vector3d& _I_P, const Eigen::Vector3d& _pCom_Base,
-                               const Eigen::Vector3d& _pCom_O, const Eigen::Vector3d& _pCom_A,
-                               const Eigen::Vector3d& _pCom_P) {
+  void updateDynamicParameters(
+      const double &_m_Base, const double &_m_O, const double &_m_A,
+      const double &_m_P, const Eigen::Vector3d &_I_Base,
+      const Eigen::Vector3d &_I_O, const Eigen::Vector3d &_I_A,
+      const Eigen::Vector3d &_I_P, const Eigen::Vector3d &_pCom_Base,
+      const Eigen::Vector3d &_pCom_O, const Eigen::Vector3d &_pCom_A,
+      const Eigen::Vector3d &_pCom_P) {
     m_Base = _m_Base;
     m_O = _m_O;
     m_A = _m_A;
@@ -72,7 +84,8 @@ class Dynamics {
     pComz_P = _pCom_P.z();
   }
 
-  void updateBaseOffset(const Eigen::Vector3d& _p_BO, const Eigen::Quaterniond& _q_BO) {
+  void updateBaseOffset(const Eigen::Vector3d &_p_BO,
+                        const Eigen::Quaterniond &_q_BO) {
     x_BO = _p_BO.x();
     y_BO = _p_BO.y();
     z_BO = _p_BO.z();
@@ -82,28 +95,29 @@ class Dynamics {
     qz_BO = _q_BO.z();
   }
 
-  void getBaseWrench(Eigen::Vector3d* force_B, Eigen::Vector3d* torque_B) {
+  void getBaseWrench(Eigen::Vector3d *force_B, Eigen::Vector3d *torque_B) {
     assert(force_B);
     assert(torque_B);
     *force_B = force_B_;
     *torque_B = torque_B_;
   }
 
-  void getEndEffectorForce(Eigen::Vector3d* force_ee) {
+  void getEndEffectorForce(Eigen::Vector3d *force_ee) {
     assert(force_ee);
     *force_ee = force_ee_;
   }
 
-  void getActuatorTorques(Eigen::Vector3d* torque_act) {
+  void getActuatorTorques(Eigen::Vector3d *torque_act) {
     assert(torque_act);
     *torque_act = torque_act_;
   }
 
-  void computeForces(const Eigen::Vector3d& q_a, const Eigen::Vector3d& qd_a,
-                     const Eigen::Vector3d& qdd_a, const Eigen::Quaterniond& q_WB,
-                     const Eigen::Vector3d& B_om_WB, const Eigen::Vector3d& B_dom_WB,
-                     const Eigen::Vector3d& B_dv_WB, const Eigen::Vector3d& p_OE,
-                     const Eigen::Vector3d& v_OE, const Eigen::Vector3d& dv_OE) {
+  void
+  computeForces(const Eigen::Vector3d &q_a, const Eigen::Vector3d &qd_a,
+                const Eigen::Vector3d &qdd_a, const Eigen::Quaterniond &q_WB,
+                const Eigen::Vector3d &B_om_WB, const Eigen::Vector3d &B_dom_WB,
+                const Eigen::Vector3d &B_dv_WB, const Eigen::Vector3d &p_OE,
+                const Eigen::Vector3d &v_OE, const Eigen::Vector3d &dv_OE) {
     double q_a1 = q_a(0);
     double q_a2 = q_a(1);
     double q_a3 = q_a(2);
@@ -153,7 +167,7 @@ class Dynamics {
 #include "tau_tree.h"
   }
 
- private:
+private:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constant kinematic parameters
   std::shared_ptr<DeltaControllerParameters> params_;
@@ -204,6 +218,6 @@ class Dynamics {
   Eigen::Vector3d force_ee_;
 };
 
-}  // namespace delta_control
+} // namespace delta_control
 
-#endif  // DELTA_CONTROL_DYNAMICS_H
+#endif // DELTA_CONTROL_DYNAMICS_H

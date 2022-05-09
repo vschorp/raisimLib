@@ -7,7 +7,7 @@
  * https://github.com/berndporr/iir1
  *
  * See Documentation.cpp for contact information, notes, and bibliography.
- * 
+ *
  * -----------------------------------------------------------------
  *
  * License: MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -41,12 +41,12 @@
 //
 
 #ifdef _MSC_VER
-#  pragma warning (disable: 4100)
+#pragma warning(disable : 4100)
 #endif
 
 // This exports the classes/structures to the windows DLL
 #ifdef _WIN32
-#define DllExport   __declspec( dllexport )
+#define DllExport __declspec(dllexport)
 #define _CRT_SECURE_NO_WARNINGS
 #else
 #define DllExport
@@ -59,10 +59,11 @@
 #include <cmath>
 #include <complex>
 #include <cstring>
-#include <string>
 #include <limits>
+#include <string>
 #include <vector>
 
-static const char orderTooHigh[] = "Requested order is too high. Provide a higher order for the template.";
+static const char orderTooHigh[] =
+    "Requested order is too high. Provide a higher order for the template.";
 
 #endif

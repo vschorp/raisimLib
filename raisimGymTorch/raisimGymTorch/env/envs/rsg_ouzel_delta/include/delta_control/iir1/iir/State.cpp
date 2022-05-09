@@ -7,7 +7,7 @@
  * https://github.com/berndporr/iir1
  *
  * See Documentation.cpp for contact information, notes, and bibliography.
- * 
+ *
  * -----------------------------------------------------------------
  *
  * License: MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -33,8 +33,8 @@
  * THE SOFTWARE.
  **/
 
-#include "Common.h"
 #include "State.h"
+#include "Common.h"
 
 namespace Iir {
 

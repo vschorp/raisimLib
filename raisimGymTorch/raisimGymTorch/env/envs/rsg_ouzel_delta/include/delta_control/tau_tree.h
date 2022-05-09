@@ -357,17 +357,21 @@ double t404 = -Ixx_A * (t164 - t191 - t205 + t337);
 double t409 = t312 + t345;
 double t411 = t304 + t346;
 double t412 = -m_O * (t217 + t224 + t225 + t292);
-double t415 = -m_A * pComx_A * (t217 + t224 + t225 + r_b * (t88 - t96 - t116 + t235));
+double t415 =
+    -m_A * pComx_A * (t217 + t224 + t225 + r_b * (t88 - t96 - t116 + t235));
 double t417 = m_O * (t217 + t224 + t225 + t292);
-double t418 = m_A * pComx_A * (t217 + t224 + t225 + r_b * (t88 - t96 - t116 + t235));
+double t418 =
+    m_A * pComx_A * (t217 + t224 + t225 + r_b * (t88 - t96 - t116 + t235));
 double t428 = t275 + t319 + t346;
 double t429 = t217 + t224 + t225 + t275 + t316;
 double t440 = t4 * t54 * (-t275 + t319 + t346) * (-1.0 / 2.0);
 double t441 = t7 * t54 * (-t275 + t319 + t346) * (-1.0 / 2.0);
 double t491 = -t7 * (-t361 + t362 + Ixx_A * (t164 - t191 - t205 + t337));
 double t495 = t7 * (-t361 + t362 + Ixx_A * (t164 - t191 - t205 + t337));
-double t496 = t4 * (-t361 + t362 + Ixx_A * (t164 - t191 - t205 + t337)) * (-1.0 / 2.0);
-double t501 = (t4 * t54 * (-t361 + t362 + Ixx_A * (t164 - t191 - t205 + t337))) / 2.0;
+double t496 =
+    t4 * (-t361 + t362 + Ixx_A * (t164 - t191 - t205 + t337)) * (-1.0 / 2.0);
+double t501 =
+    (t4 * t54 * (-t361 + t362 + Ixx_A * (t164 - t191 - t205 + t337))) / 2.0;
 double t288 = -t287;
 double t324 = -t321;
 double t329 = -t325;
@@ -409,8 +413,10 @@ double t442 = t215 + t216 + t232 + t311 + t328;
 double t443 = t215 + t216 + t232 + t311 + t330;
 double t459 = dvx_OE + t13 + t43 + t173 + t183 + t270 + t296 + t315 + t345;
 double t461 = t12 + t37 + t41 + t171 + t184 + t265 + t306 + t310 + t346;
-double t468 = t8 + t38 + t42 + t174 + t182 + t215 + t216 + t232 + t262 + t266 + t307 + t308;
-double t476 = dvy_OE + t9 + t44 + t176 + t181 + t217 + t224 + t225 + t271 + t293 + t297 + t314;
+double t468 = t8 + t38 + t42 + t174 + t182 + t215 + t216 + t232 + t262 + t266 +
+              t307 + t308;
+double t476 = dvy_OE + t9 + t44 + t176 + t181 + t217 + t224 + t225 + t271 +
+              t293 + t297 + t314;
 double t489 = t361 + t366 + t404;
 double t500 = t54 * t496;
 double t332 = pComx_A * t331;
@@ -468,8 +474,10 @@ double t450 = t326 + t329 + t355;
 double t454 = pComx_A * t453;
 double t456 = pComx_A * t455;
 double t457 = t382 + t414;
-double t463 = -m_A * (t217 + t224 + t225 + t420 + r_b * (t88 - t96 - t116 + t235));
-double t466 = m_A * (t217 + t224 + t225 + t420 + r_b * (t88 - t96 - t116 + t235));
+double t463 =
+    -m_A * (t217 + t224 + t225 + t420 + r_b * (t88 - t96 - t116 + t235));
+double t466 =
+    m_A * (t217 + t224 + t225 + t420 + r_b * (t88 - t96 - t116 + t235));
 double t467 = -t464;
 double t471 = t470 * x_OE;
 double t472 = t470 * y_OE;
@@ -480,9 +488,11 @@ double t486 = t2 * t485;
 double t487 = t5 * t485;
 double t494 = t370 + t376 + t394;
 double t505 = t226 + t227 + t228 + t277 + t320 + t435;
-double t515 = -m_A * pComx_A * (-t433 + t447 + (t7 * t54 * (-t275 + t319 + t346)) / 2.0);
-double t516 =
-    m_A * pComx_A * (-t433 + t447 + (t7 * t54 * (-t275 + t319 + t346)) / 2.0) * (-1.0 / 2.0);
+double t515 =
+    -m_A * pComx_A * (-t433 + t447 + (t7 * t54 * (-t275 + t319 + t346)) / 2.0);
+double t516 = m_A * pComx_A *
+              (-t433 + t447 + (t7 * t54 * (-t275 + t319 + t346)) / 2.0) *
+              (-1.0 / 2.0);
 double t525 = t374 + t432 + t440 + t446;
 double t526 = t378 + t430 + t438 + t444;
 double t451 = t2 * t450;
@@ -590,31 +600,39 @@ double t585 = t84 * t583;
 double t586 = t111 * t583;
 double t591 = -t590;
 double t587 = -t586;
-double t593 = t148 + t149 + t238 + t239 + t251 + t252 + t349 + t451 + t467 + t472 + t482 + t487 +
-              t496 + t499 + t540 + t541 + t558 + t559 + t566 + t568;
-double t594 = t179 + t180 + t189 + t236 + t237 + t255 + t256 + t286 + t288 + t347 + t351 + t357 +
-              t401 + t402 + t406 + t407 + t458 + t460 + t471 + t483 + t501 + t503 + t514 + t516 +
-              t530 + t543 + t544 + t563 + t565;
-double t595 = t152 + t153 + t240 + t241 + t253 + t254 + t452 + t465 + t481 + t484 + t488 + t495 +
-              t497 + t538 + t539 + t573 + t575 + t576 + t578;
+double t593 = t148 + t149 + t238 + t239 + t251 + t252 + t349 + t451 + t467 +
+              t472 + t482 + t487 + t496 + t499 + t540 + t541 + t558 + t559 +
+              t566 + t568;
+double t594 = t179 + t180 + t189 + t236 + t237 + t255 + t256 + t286 + t288 +
+              t347 + t351 + t357 + t401 + t402 + t406 + t407 + t458 + t460 +
+              t471 + t483 + t501 + t503 + t514 + t516 + t530 + t543 + t544 +
+              t563 + t565;
+double t595 = t152 + t153 + t240 + t241 + t253 + t254 + t452 + t465 + t481 +
+              t484 + t488 + t495 + t497 + t538 + t539 + t573 + t575 + t576 +
+              t578;
 double t596 = t580 + t585 + t592;
 double t597 = t582 + t584 + t591;
 double t598 = t581 + t587 + t589;
 
-force_B_(0) = -t596
-              - m_Base * (t35 + t101 - pComz_Base * t56 + pComy_Base * t66 + pComx_Base * t69);
-force_B_(1) = t598 + m_Base * (t102 + pComx_Base * t57 - pComz_Base * t64 - pComy_Base * t68);
-force_B_(2) = t597 - m_Base * (t36 + t126 - pComy_Base * t55 + pComx_Base * t65 + pComz_Base * t67);
+force_B_(0) = -t596 - m_Base * (t35 + t101 - pComz_Base * t56 +
+                                pComy_Base * t66 + pComx_Base * t69);
+force_B_(1) = t598 + m_Base * (t102 + pComx_Base * t57 - pComz_Base * t64 -
+                               pComy_Base * t68);
+force_B_(2) = t597 - m_Base * (t36 + t126 - pComy_Base * t55 +
+                               pComx_Base * t65 + pComz_Base * t67);
 
-torque_B_(0) = Iyy_Base * t60 + Izz_Base * t24 - t79 * t595 - t84 * t594 + t112 * t593 + t597 * y_BO
-               - t598 * z_BO
-               - m_Base * (pComz_Base * t102 - pComy_Base * t133) + B_domx_WB * Ixx_Base;
-torque_B_(1) = Ixx_Base * t23 + Izz_Base * t59 - t80 * t593 + t82 * t595 - t111 * t594 - t597 * x_BO
-               - t596 * z_BO
-               + m_Base * (pComz_Base * t127 - pComx_Base * t133) + B_domy_WB * Iyy_Base;
-torque_B_(2) = Ixx_Base * t58 + Iyy_Base * t22 + t78 * t594 + t83 * t593 + t109 * t595 + t598 * x_BO
-               + t596 * y_BO
-               + m_Base * (pComx_Base * t102 - pComy_Base * t127) + B_domz_WB * Izz_Base;
+torque_B_(0) =
+    Iyy_Base * t60 + Izz_Base * t24 - t79 * t595 - t84 * t594 + t112 * t593
+    + t597 * y_BO - t598 * z_BO
+    - m_Base * (pComz_Base * t102 - pComy_Base * t133) + B_domx_WB * Ixx_Base;
+torque_B_(1) =
+    Ixx_Base * t23 + Izz_Base * t59 - t80 * t593 + t82 * t595 - t111 * t594
+    - t597 * x_BO - t596 * z_BO
+    + m_Base * (pComz_Base * t127 - pComx_Base * t133) + B_domy_WB * Iyy_Base;
+torque_B_(2) =
+    Ixx_Base * t58 + Iyy_Base * t22 + t78 * t594 + t83 * t593 + t109 * t595
+    + t598 * x_BO + t596 * y_BO
+    + m_Base * (pComx_Base * t102 - pComy_Base * t127) + B_domz_WB * Izz_Base;
 
 torque_act_(0) = t178 - t351 + t352 - t458;
 torque_act_(1) = -t285 - t387 + t389 + t512;

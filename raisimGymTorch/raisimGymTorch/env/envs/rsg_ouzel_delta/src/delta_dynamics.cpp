@@ -8,18 +8,14 @@
 
 namespace delta_dynamics {
 
-DeltaController::DeltaController(const Yaml::Node& cfg, double dt)
+DeltaController::DeltaController(const Yaml::Node &cfg, double dt)
     : pos_error_integrator_max_(kDefaultPosIntegratorMax),
       q_error_integrator_max_(kDefaultQIntegratorMax),
       pos_error_integrator_(Eigen::Vector3d::Zero()),
       q_error_integrator_(Eigen::Vector3d::Zero()),
-      p_BO_(Eigen::Vector3d::Zero()),
-      q_BO_(Eigen::Quaterniond::Identity()),
-      filter_cutoff_f_(kDefaultFilterCutoffFrequency),
-      arm_fixed_(false),
-      fixed_arm_z_(kDefaultFixedArmZ),
-      filter_base_wrench_(false),
-      cfg_(cfg) {
+      p_BO_(Eigen::Vector3d::Zero()), q_BO_(Eigen::Quaterniond::Identity()),
+      filter_cutoff_f_(kDefaultFilterCutoffFrequency), arm_fixed_(false),
+      fixed_arm_z_(kDefaultFixedArmZ), filter_base_wrench_(false), cfg_(cfg) {
   params_ = std::make_shared<delta_control::DeltaControllerParameters>();
   state_ = std::make_shared<delta_control::DeltaState>();
   reference_ = std::make_shared<delta_control::DeltaRef>();
@@ -28,8 +24,8 @@ DeltaController::DeltaController(const Yaml::Node& cfg, double dt)
 
   sample_time_ = dt;
   prev_q_cmd_.setZero();
-  for (int i=0; i<3; i++) {
-    joints_.push_back( new raisim_actuators::delta_joint(sample_time_));
+  for (int i = 0; i < 3; i++) {
+    joints_.push_back(new raisim_actuators::delta_joint(sample_time_));
   }
 
   setMode(0);
@@ -42,14 +38,15 @@ DeltaController::DeltaController(const Yaml::Node& cfg, double dt)
   double theta_max = cfg_["theta_max"].template As<float>();
   initialize(r_B, r_T, l_P, l_D, theta_min, theta_max, sample_time_);
 
-  Eigen::Vector3d I_Base, I_O, I_A, I_P, pCom_Base, pCom_O, pCom_A, pCom_P, p_BO;
+  Eigen::Vector3d I_Base, I_O, I_A, I_P, pCom_Base, pCom_O, pCom_A, pCom_P,
+      p_BO;
   Eigen::Quaterniond q_BO;
   double m_Base = cfg_["m_Base"].template As<float>();
   double m_O = cfg_["m_O"].template As<float>();
   double m_A = cfg_["m_A"].template As<float>();
   double m_P = cfg_["m_P"].template As<float>();
 
-  //ROS_WARN_STREAM("Total delta mass: "<<(m_Base+m_O+m_A+m_P));
+  // ROS_WARN_STREAM("Total delta mass: "<<(m_Base+m_O+m_A+m_P));
   I_Base = getParamVector3("I_Base");
   I_O = getParamVector3("I_O");
   I_A = getParamVector3("I_A");
@@ -61,7 +58,7 @@ DeltaController::DeltaController(const Yaml::Node& cfg, double dt)
   p_BO = getParamVector3("p_BO");
   q_BO = getParamQuat("q_BO");
   initializeDynamics(m_Base, m_O, m_A, m_P, I_Base, I_O, I_A, I_P, pCom_Base,
-                                       pCom_O, pCom_A, pCom_P, p_BO, q_BO);
+                     pCom_O, pCom_A, pCom_P, p_BO, q_BO);
 
   joints_command_.Zero();
   joints_command_(0) = joints_[0]->getPos();
@@ -87,10 +84,10 @@ void DeltaController::setJointAngles(const Eigen::Vector3d jointAngles) {
   joints_[2]->set_angle(jointAngles(2));
 }
 
-
-void DeltaController::initialize(const double& r_B, const double& r_T, const double& l_P,
-                                 const double& l_D, const double& theta_min,
-                                 const double& theta_max, const double& dt) {
+void DeltaController::initialize(const double &r_B, const double &r_T,
+                                 const double &l_P, const double &l_D,
+                                 const double &theta_min,
+                                 const double &theta_max, const double &dt) {
   params_->updateParameters(r_B, r_T, l_P, l_D, theta_min, theta_max);
   if (dt > 0.0) {
     state_->setupButterworthFilters(1.0 / dt, filter_cutoff_f_);
@@ -103,33 +100,36 @@ void DeltaController::initialize(const double& r_B, const double& r_T, const dou
 }
 
 void DeltaController::initializeDynamics(
-    const double& _m_Base, const double& _m_O, const double& _m_A, const double& _m_P,
-    const Eigen::Vector3d& _I_Base, const Eigen::Vector3d& _I_O, const Eigen::Vector3d& _I_A,
-    const Eigen::Vector3d& _I_P, const Eigen::Vector3d& _pCom_Base, const Eigen::Vector3d& _pCom_O,
-    const Eigen::Vector3d& _pCom_A, const Eigen::Vector3d& _pCom_P, const Eigen::Vector3d& _p_BO,
-    const Eigen::Quaterniond& _q_BO) {
-  dyn_->updateDynamicParameters(_m_Base, _m_O, _m_A, _m_P, _I_Base, _I_O, _I_A, _I_P, _pCom_Base, _pCom_O,
-                       _pCom_A, _pCom_P);
-  // Since odometry is already in delta base frame, just use the offset to transform forces before publishing.
-  // dyn_->updateBaseOffset(_p_BO, _q_BO);
+    const double &_m_Base, const double &_m_O, const double &_m_A,
+    const double &_m_P, const Eigen::Vector3d &_I_Base,
+    const Eigen::Vector3d &_I_O, const Eigen::Vector3d &_I_A,
+    const Eigen::Vector3d &_I_P, const Eigen::Vector3d &_pCom_Base,
+    const Eigen::Vector3d &_pCom_O, const Eigen::Vector3d &_pCom_A,
+    const Eigen::Vector3d &_pCom_P, const Eigen::Vector3d &_p_BO,
+    const Eigen::Quaterniond &_q_BO) {
+  dyn_->updateDynamicParameters(_m_Base, _m_O, _m_A, _m_P, _I_Base, _I_O, _I_A,
+                                _I_P, _pCom_Base, _pCom_O, _pCom_A, _pCom_P);
+  // Since odometry is already in delta base frame, just use the offset to
+  // transform forces before publishing. dyn_->updateBaseOffset(_p_BO, _q_BO);
   p_BO_ = _p_BO;
   q_BO_ = _q_BO;
 }
 
-void DeltaController::setGains(const double& p_gain, const double& i_gain, const double& d_gain,
-                               const double& ff_gain) {
+void DeltaController::setGains(const double &p_gain, const double &i_gain,
+                               const double &d_gain, const double &ff_gain) {
   params_->setGains(p_gain, i_gain, d_gain, ff_gain);
 }
 
-void DeltaController::setMasses(const double& mass_base, const double& mass_prox,
-                                const double& mass_dist, const double& mass_tool,
-                                const double& mass_elbow, const double& mass_motor,
-                                const double& radius_motor) {
-  params_->setMasses(mass_base, mass_prox, mass_dist, mass_tool, mass_elbow, mass_motor,
-                     radius_motor);
+void DeltaController::setMasses(
+    const double &mass_base, const double &mass_prox, const double &mass_dist,
+    const double &mass_tool, const double &mass_elbow, const double &mass_motor,
+    const double &radius_motor) {
+  params_->setMasses(mass_base, mass_prox, mass_dist, mass_tool, mass_elbow,
+                     mass_motor, radius_motor);
 }
 
-void DeltaController::updateErrorLimits(const double& max_pos_error, const double& max_vel_error) {
+void DeltaController::updateErrorLimits(const double &max_pos_error,
+                                        const double &max_vel_error) {
   params_->updateErrorLimits(max_pos_error, max_vel_error);
 }
 
@@ -148,18 +148,20 @@ int DeltaController::getMode() const {
   return int(mode);
 }
 
-void DeltaController::updateIntegrators(const Eigen::Vector3d& pos_error,
-                                        const Eigen::Vector3d& q_error, const double& dt) {
+void DeltaController::updateIntegrators(const Eigen::Vector3d &pos_error,
+                                        const Eigen::Vector3d &q_error,
+                                        const double &dt) {
   pos_error_integrator_ += pos_error * dt;
   if (pos_error_integrator_.norm() > pos_error_integrator_max_) {
     pos_error_integrator_ =
-        pos_error_integrator_ * (pos_error_integrator_max_ / pos_error_integrator_.norm());
+        pos_error_integrator_ *
+        (pos_error_integrator_max_ / pos_error_integrator_.norm());
   }
 
   q_error_integrator_ += q_error * dt;
   if (q_error_integrator_.norm() > q_error_integrator_max_) {
-    q_error_integrator_ =
-        q_error_integrator_ * (q_error_integrator_max_ / q_error_integrator_.norm());
+    q_error_integrator_ = q_error_integrator_ * (q_error_integrator_max_ /
+                                                 q_error_integrator_.norm());
   }
 }
 
@@ -168,54 +170,65 @@ void DeltaController::resetIntegrators() {
   q_error_integrator_.setZero();
 }
 
-void DeltaController::updateState(const Eigen::Quaterniond& base_q_WB,
-                                  const Eigen::Vector3d& base_vel_B,
-                                  const Eigen::Vector3d& base_angvel_B, const Eigen::VectorXd& q_in,
-                                  const Eigen::VectorXd& qd_in, const Eigen::VectorXd& effort_in,
-                                  const double& dt) {
+void DeltaController::updateState(const Eigen::Quaterniond &base_q_WB,
+                                  const Eigen::Vector3d &base_vel_B,
+                                  const Eigen::Vector3d &base_angvel_B,
+                                  const Eigen::VectorXd &q_in,
+                                  const Eigen::VectorXd &qd_in,
+                                  const Eigen::VectorXd &effort_in,
+                                  const double &dt) {
   Eigen::Vector3d q3_in, qd3_in, effort3_in;
   for (size_t i = 0; i < 3; ++i) {
     q3_in(i) = q_in(i);
     qd3_in(i) = qd_in(i);
     effort3_in(i) = effort_in(i);
   }
-  updateState(base_q_WB, base_vel_B, base_angvel_B, q3_in, qd3_in, effort3_in, dt);
+  updateState(base_q_WB, base_vel_B, base_angvel_B, q3_in, qd3_in, effort3_in,
+              dt);
 }
 
-void DeltaController::updateState(const Eigen::Quaterniond& base_q_WB,
-                                  const Eigen::Vector3d& base_vel_B,
-                                  const Eigen::Vector3d& base_angvel_B, const Eigen::Vector3d& q_in,
-                                  const Eigen::Vector3d& qd_in, const Eigen::Vector3d& effort_in,
-                                  const double& dt) {
+void DeltaController::updateState(const Eigen::Quaterniond &base_q_WB,
+                                  const Eigen::Vector3d &base_vel_B,
+                                  const Eigen::Vector3d &base_angvel_B,
+                                  const Eigen::Vector3d &q_in,
+                                  const Eigen::Vector3d &qd_in,
+                                  const Eigen::Vector3d &effort_in,
+                                  const double &dt) {
   Eigen::Vector3d tool_pos_B, tool_vel_B, q, qd, effort;
   Eigen::Matrix3d jac_inv(Eigen::Matrix3d::Zero());
 
   q = std::isnan(q_in.norm()) ? Eigen::Vector3d::Zero() : q_in;
   qd = std::isnan(qd_in.norm()) ? Eigen::Vector3d::Zero() : qd_in;
-  effort = std::isnan(effort_in.norm()) ? Eigen::Vector3d::Zero() : Eigen::Vector3d(effort_in);
+  effort = std::isnan(effort_in.norm()) ? Eigen::Vector3d::Zero()
+                                        : Eigen::Vector3d(effort_in);
 
   fwkinPosition(&tool_pos_B, q);
   Eigen::Matrix3d J(Eigen::Matrix3d::Zero());
   kin_->jac(&J, state_->q(), state_->tool_pos_B());
   tool_vel_B = J * qd;
 
-  updateState(base_q_WB, base_vel_B, base_angvel_B, q, qd, effort, tool_pos_B, tool_vel_B, dt);
+  updateState(base_q_WB, base_vel_B, base_angvel_B, q, qd, effort, tool_pos_B,
+              tool_vel_B, dt);
 }
 
 Eigen::Vector3d DeltaController::getqPos() {
-    Eigen::Vector3d q(joints_[0]->getPos(),joints_[1]->getPos(),joints_[2]->getPos());
-    return q;
-  }
-  Eigen::Vector3d DeltaController::getqVel() {
-    Eigen::Vector3d qd(joints_[0]->getVel(),joints_[1]->getVel(),joints_[2]->getVel());
-    return qd;
-  }
-  Eigen::Vector3d DeltaController::getqAcc() {
-    Eigen::Vector3d qdd(joints_[0]->getAcc(),joints_[1]->getAcc(),joints_[2]->getAcc());
-    return qdd;
-  }
+  Eigen::Vector3d q(joints_[0]->getPos(), joints_[1]->getPos(),
+                    joints_[2]->getPos());
+  return q;
+}
+Eigen::Vector3d DeltaController::getqVel() {
+  Eigen::Vector3d qd(joints_[0]->getVel(), joints_[1]->getVel(),
+                     joints_[2]->getVel());
+  return qd;
+}
+Eigen::Vector3d DeltaController::getqAcc() {
+  Eigen::Vector3d qdd(joints_[0]->getAcc(), joints_[1]->getAcc(),
+                      joints_[2]->getAcc());
+  return qdd;
+}
 
-bool DeltaController::fwkinVel(Eigen::Vector3d* ee_vel, const Eigen::Vector3d& ee_pos) {
+bool DeltaController::fwkinVel(Eigen::Vector3d *ee_vel,
+                               const Eigen::Vector3d &ee_pos) {
   Eigen::Matrix3d J(Eigen::Matrix3d::Zero());
   kin_->jac(&J, getqPos(), ee_pos);
   *ee_vel = J * getqVel();
@@ -224,7 +237,8 @@ bool DeltaController::fwkinVel(Eigen::Vector3d* ee_vel, const Eigen::Vector3d& e
 
 // void DeltaController::updateState(const Eigen::Quaterniond& base_q_WB,
 //                                   const Eigen::Vector3d& base_vel_B,
-//                                   const Eigen::Vector3d& base_angvel_B, const double& dt) {
+//                                   const Eigen::Vector3d& base_angvel_B, const
+//                                   double& dt) {
 //   Eigen::Vector3d tool_pos_B, tool_vel_B, q, qd, effort;
 //   Eigen::Matrix3d jac_inv(Eigen::Matrix3d::Zero());
 
@@ -232,52 +246,56 @@ bool DeltaController::fwkinVel(Eigen::Vector3d* ee_vel, const Eigen::Vector3d& e
 
 //   q = std::isnan(q_in.norm()) ? Eigen::Vector3d::Zero() : q_in;
 //   qd = std::isnan(qd_in.norm()) ? Eigen::Vector3d::Zero() : qd_in;
-//   effort = std::isnan(effort_in.norm()) ? Eigen::Vector3d::Zero() : Eigen::Vector3d(effort_in);
+//   effort = std::isnan(effort_in.norm()) ? Eigen::Vector3d::Zero() :
+//   Eigen::Vector3d(effort_in);
 
 //   fwkinPosition(&tool_pos_B, q);
 //   Eigen::Matrix3d J(Eigen::Matrix3d::Zero());
 //   kin_->jac(&J, state_->q(), state_->tool_pos_B());
 //   tool_vel_B = J * qd;
 
-//   updateState(base_q_WB, base_vel_B, base_angvel_B, q, qd, effort, tool_pos_B, tool_vel_B, dt);
+//   updateState(base_q_WB, base_vel_B, base_angvel_B, q, qd, effort,
+//   tool_pos_B, tool_vel_B, dt);
 // }
 
-void DeltaController::updateState(const Eigen::Quaterniond& base_q_WB,
-                                  const Eigen::Vector3d& base_vel_B,
-                                  const Eigen::Vector3d& base_angvel_B, const Eigen::Vector3d& q,
-                                  const Eigen::Vector3d& qd, const Eigen::Vector3d& effort,
-                                  const Eigen::Vector3d& tool_pos_B,
-                                  const Eigen::Vector3d& tool_vel_B, const double& dt) {
+void DeltaController::updateState(
+    const Eigen::Quaterniond &base_q_WB, const Eigen::Vector3d &base_vel_B,
+    const Eigen::Vector3d &base_angvel_B, const Eigen::Vector3d &q,
+    const Eigen::Vector3d &qd, const Eigen::Vector3d &effort,
+    const Eigen::Vector3d &tool_pos_B, const Eigen::Vector3d &tool_vel_B,
+    const double &dt) {
   state_->update(q, qd, effort, dt);
   state_->updateBase(base_q_WB, base_vel_B, base_angvel_B, dt);
   state_->updateTool(tool_pos_B, tool_vel_B, dt);
 }
 
-void DeltaController::updateReference(const Eigen::Vector3d& pos_B, const Eigen::Vector3d& vel_B,
-                                      const Eigen::Vector3d& acc_B,
-                                      const Eigen::Vector3d& force_B) {
+void DeltaController::updateReference(const Eigen::Vector3d &pos_B,
+                                      const Eigen::Vector3d &vel_B,
+                                      const Eigen::Vector3d &acc_B,
+                                      const Eigen::Vector3d &force_B) {
   reference_->update(pos_B, vel_B, acc_B, force_B);
 }
 
-void DeltaController::getWorkspacePositionError(Eigen::Vector3d* tool_pos_err) {
+void DeltaController::getWorkspacePositionError(Eigen::Vector3d *tool_pos_err) {
   assert(tool_pos_err);
   *tool_pos_err = state_->tool_pos_B() - reference_->pos();
 }
 
-void DeltaController::getToolPosition(Eigen::Vector3d* tool_pos) {
+void DeltaController::getToolPosition(Eigen::Vector3d *tool_pos) {
   assert(tool_pos);
   *tool_pos = state_->tool_pos_B();
 }
 
-void DeltaController::getJointspacePositionError(Eigen::Vector3d* q_err) {
+void DeltaController::getJointspacePositionError(Eigen::Vector3d *q_err) {
   Eigen::Vector3d q_ref;
   inkinPosition(&q_ref, reference_->pos());
   *q_err = state_->q() - q_ref;
 }
 
-void DeltaController::getControlCommand(Eigen::VectorXd* delta_pos_cmd,
-                                        Eigen::VectorXd* delta_vel_cmd,
-                                        Eigen::VectorXd* delta_eff_cmd, const double& dt) {
+void DeltaController::getControlCommand(Eigen::VectorXd *delta_pos_cmd,
+                                        Eigen::VectorXd *delta_vel_cmd,
+                                        Eigen::VectorXd *delta_eff_cmd,
+                                        const double &dt) {
   assert(delta_pos_cmd);
   assert(delta_vel_cmd);
   assert(delta_eff_cmd);
@@ -324,36 +342,41 @@ void DeltaController::getControlCommand(Eigen::VectorXd* delta_pos_cmd,
   updateIntegrators(ee_pos_error, q_error, dt);
 
   switch (params_->control_mode()) {
-    case delta_control::DeltaControlMode::Position: {
-      // Apply limited position error.
-      success = inkinPosition(&delta_pos3_cmd, state_->tool_pos_B() + ee_pos_error);
-      if (success) {
-        *delta_pos_cmd = Eigen::VectorXd(delta_pos3_cmd);
-      } else {
-        *delta_pos_cmd = Eigen::VectorXd(prev_q_cmd_);
-      }
-    }
-    case delta_control::DeltaControlMode::Velocity: {  // Workspace velocity PID.
-      Eigen::Vector3d ee_vel_cmd;
-      ee_vel_cmd = params_->p_gain() * ee_pos_error + params_->i_gain() * pos_error_integrator_ +
-                   params_->d_gain() * ee_vel_error + params_->ff_gain() * ee_vel_ref;
-      Eigen::Vector3d delta_vel3_cmd;
-      inkinVelocity(&delta_vel3_cmd, ee_vel_cmd);
-      *delta_vel_cmd = delta_vel3_cmd;
-      break;
+  case delta_control::DeltaControlMode::Position: {
+    // Apply limited position error.
+    success =
+        inkinPosition(&delta_pos3_cmd, state_->tool_pos_B() + ee_pos_error);
+    if (success) {
+      *delta_pos_cmd = Eigen::VectorXd(delta_pos3_cmd);
+    } else {
+      *delta_pos_cmd = Eigen::VectorXd(prev_q_cmd_);
     }
   }
+  case delta_control::DeltaControlMode::Velocity: { // Workspace velocity PID.
+    Eigen::Vector3d ee_vel_cmd;
+    ee_vel_cmd = params_->p_gain() * ee_pos_error +
+                 params_->i_gain() * pos_error_integrator_ +
+                 params_->d_gain() * ee_vel_error +
+                 params_->ff_gain() * ee_vel_ref;
+    Eigen::Vector3d delta_vel3_cmd;
+    inkinVelocity(&delta_vel3_cmd, ee_vel_cmd);
+    *delta_vel_cmd = delta_vel3_cmd;
+    break;
+  }
+  }
   prev_q_cmd_ = *delta_pos_cmd;
-}  // namespace delta_control
+} // namespace delta_control
 
-Eigen::Vector3d DeltaController::getParamVector3(const std::string& param_name) {
+Eigen::Vector3d
+DeltaController::getParamVector3(const std::string &param_name) {
   double x = cfg_[param_name]["x"].template As<float>();
   double y = cfg_[param_name]["y"].template As<float>();
   double z = cfg_[param_name]["z"].template As<float>();
   return Eigen::Vector3d(x, y, z);
 }
 
-Eigen::Quaterniond DeltaController::getParamQuat(const std::string& param_name) {
+Eigen::Quaterniond
+DeltaController::getParamQuat(const std::string &param_name) {
   double w = cfg_[param_name]["w"].template As<float>();
   double x = cfg_[param_name]["x"].template As<float>();
   double y = cfg_[param_name]["y"].template As<float>();
@@ -361,17 +384,18 @@ Eigen::Quaterniond DeltaController::getParamQuat(const std::string& param_name) 
   return Eigen::Quaterniond(w, x, y, z);
 }
 
-void DeltaController::getTargetPos(Eigen::Vector3d* delta_pos_ref) {
+void DeltaController::getTargetPos(Eigen::Vector3d *delta_pos_ref) {
   assert(delta_pos_ref);
   delta_pos_ref->setZero();
   bool projected = projectToWorkspace(delta_pos_ref, reference_->pos());
 }
 
-bool DeltaController::fwkinPosition(Eigen::Vector3d* ee_pos) {
+bool DeltaController::fwkinPosition(Eigen::Vector3d *ee_pos) {
   return fwkinPosition(ee_pos, getqPos());
 }
 
-bool DeltaController::fwkinPosition(Eigen::Vector3d* ee_pos, const Eigen::Vector3d& q) {
+bool DeltaController::fwkinPosition(Eigen::Vector3d *ee_pos,
+                                    const Eigen::Vector3d &q) {
   assert(ee_pos);
   // The forward kinematics of the Clavel's Delta are defined by the
   // intersection of 3 spheres located at at a horizontal offset from the knee
@@ -389,7 +413,8 @@ bool DeltaController::fwkinPosition(Eigen::Vector3d* ee_pos, const Eigen::Vector
   for (int i = 0; i < spheres.size(); ++i) {
     double cos_theta_L = std::cos(q[i]) * params_->l_P();
     spheres[i] << std::cos(params_->gamma()(i)) * (R_s + cos_theta_L),
-        std::sin(params_->gamma()(i)) * (R_s + cos_theta_L), std::sin(q[i]) * params_->l_P();
+        std::sin(params_->gamma()(i)) * (R_s + cos_theta_L),
+        std::sin(q[i]) * params_->l_P();
   }
 
   // Find circle inscribed by intersection of two spheres.
@@ -419,7 +444,8 @@ bool DeltaController::fwkinPosition(Eigen::Vector3d* ee_pos, const Eigen::Vector
   double var_b = -2.0 * beta;
   double var_a = gamma + alpha;
   double discriminant = var_b * var_b - 4.0 * var_a * var_c;
-  if (discriminant < 0.0) return false;
+  if (discriminant < 0.0)
+    return false;
 
   double sq_discriminant = std::sqrt(discriminant);
   double t0 = (-var_b + sq_discriminant) / (2.0 * var_a);
@@ -430,8 +456,10 @@ bool DeltaController::fwkinPosition(Eigen::Vector3d* ee_pos, const Eigen::Vector
   t0 = t0 > 0 ? t0 : t0 + 2.0 * M_PI;
   t1 = t1 > 0 ? t1 : t1 + 2.0 * M_PI;
 
-  Eigen::Vector3d point0 = c_circ + r_circ * (std::cos(t0) * u + std::sin(t0) * v);
-  Eigen::Vector3d point1 = c_circ + r_circ * (std::cos(t1) * u + std::sin(t1) * v);
+  Eigen::Vector3d point0 =
+      c_circ + r_circ * (std::cos(t0) * u + std::sin(t0) * v);
+  Eigen::Vector3d point1 =
+      c_circ + r_circ * (std::cos(t1) * u + std::sin(t1) * v);
 
   // Select non-inverted solution (farthest from delta base).
   *ee_pos = point0[2] > point1[2] ? point0 : point1;
@@ -441,9 +469,13 @@ bool DeltaController::fwkinPosition(Eigen::Vector3d* ee_pos, const Eigen::Vector
 
 void DeltaController::fixArm(const bool set_fixed) { arm_fixed_ = set_fixed; }
 
-void DeltaController::setFixedZ(const double& fixed_arm_z) { fixed_arm_z_ = fixed_arm_z; }
+void DeltaController::setFixedZ(const double &fixed_arm_z) {
+  fixed_arm_z_ = fixed_arm_z;
+}
 
-void DeltaController::setBaseWrenchFilter(const bool set_filter, const double& cutoff_freq, const double& dt) {
+void DeltaController::setBaseWrenchFilter(const bool set_filter,
+                                          const double &cutoff_freq,
+                                          const double &dt) {
   filter_base_wrench_ = set_filter;
   filter_cutoff_f_ = cutoff_freq;
   for (int i = 0; i < 3; i++) {
@@ -452,23 +484,26 @@ void DeltaController::setBaseWrenchFilter(const bool set_filter, const double& c
   }
 }
 
-bool DeltaController::inkinPosition(Eigen::Vector3d* q, const Eigen::Vector3d& ee_pos) {
+bool DeltaController::inkinPosition(Eigen::Vector3d *q,
+                                    const Eigen::Vector3d &ee_pos) {
   assert(q);
   // The inverse kinematics computation is based on:
   // "The Delta Parallel Robot: Kinematics Solutions"
   // by Robert L. Williams II, Ph.D., williar4@ohio.edu
 
-  Eigen::Vector3d theta;  // Joint angles [rad]
+  Eigen::Vector3d theta; // Joint angles [rad]
   theta.setZero();
   double r_s = params_->r_B() - params_->r_T();
 
   // Evaluate joint solutions for each leg.
   for (int i = 0; i < 3; i++) {
-    double G =
-        ee_pos(0) * ee_pos(0) + ee_pos(1) * ee_pos(1) + ee_pos(2) * ee_pos(2) + r_s * r_s +
-        params_->l_P() * params_->l_P() - params_->l_D() * params_->l_D() -
-        2.0 * r_s *
-            (ee_pos(0) * std::cos(params_->gamma()(i)) + ee_pos(1) * std::sin(params_->gamma()(i)));
+    double G = ee_pos(0) * ee_pos(0) + ee_pos(1) * ee_pos(1) +
+               ee_pos(2) * ee_pos(2) + r_s * r_s +
+               params_->l_P() * params_->l_P() -
+               params_->l_D() * params_->l_D() -
+               2.0 * r_s *
+                   (ee_pos(0) * std::cos(params_->gamma()(i)) +
+                    ee_pos(1) * std::sin(params_->gamma()(i)));
     double E = 2.0 * params_->l_P() *
                (r_s - ee_pos(0) * std::cos(params_->gamma()(i)) -
                 ee_pos(1) * std::sin(params_->gamma()(i)));
@@ -488,9 +523,11 @@ bool DeltaController::inkinPosition(Eigen::Vector3d* q, const Eigen::Vector3d& e
     //  - within joint limits
     //  - traversable from zero position without inversion (always knee out)
     bool sol_1_feasible =
-        !std::isnan(sol_1) && (sol_1 >= params_->theta_min() && sol_1 <= params_->theta_max());
+        !std::isnan(sol_1) &&
+        (sol_1 >= params_->theta_min() && sol_1 <= params_->theta_max());
     bool sol_2_feasible =
-        !std::isnan(sol_2) && (sol_2 >= params_->theta_min() && sol_2 <= params_->theta_max());
+        !std::isnan(sol_2) &&
+        (sol_2 >= params_->theta_min() && sol_2 <= params_->theta_max());
 
     if (sol_1_feasible && sol_2_feasible) {
       // Both solutions are feasible. Choose smaller angle (knee outward).
@@ -511,7 +548,8 @@ bool DeltaController::inkinPosition(Eigen::Vector3d* q, const Eigen::Vector3d& e
   return true;
 }
 
-bool DeltaController::inkinVelocity(Eigen::Vector3d* qdot, const Eigen::Vector3d& ee_vel) {
+bool DeltaController::inkinVelocity(Eigen::Vector3d *qdot,
+                                    const Eigen::Vector3d &ee_vel) {
   assert(qdot);
   // The equations in matrix form are: M*Pdot = V*qdot
   // Performing inversion of V (which is a diagonal 3x3 matrix):
@@ -529,16 +567,20 @@ bool DeltaController::inkinVelocity(Eigen::Vector3d* qdot, const Eigen::Vector3d
   return true;
 }
 
-void DeltaController::getBaseWrench(Eigen::Vector3d* force_B, Eigen::Vector3d* torque_B, const Eigen::Quaterniond& q_WB,
-                     const Eigen::Vector3d& B_om_WB /*angvel*/, const Eigen::Vector3d& B_dom_WB /*angacc*/,
-                     const Eigen::Vector3d& B_dv_WB /*linacc*/, const Eigen::Vector3d& p_OE /*tool_pos*/,
-                     const Eigen::Vector3d& v_OE /*tool_vel*/, const Eigen::Vector3d& dv_OE /*tool_acc*/) {
+void DeltaController::getBaseWrench(Eigen::Vector3d *force_B,
+                                    Eigen::Vector3d *torque_B,
+                                    const Eigen::Quaterniond &q_WB,
+                                    const Eigen::Vector3d &B_om_WB /*angvel*/,
+                                    const Eigen::Vector3d &B_dom_WB /*angacc*/,
+                                    const Eigen::Vector3d &B_dv_WB /*linacc*/,
+                                    const Eigen::Vector3d &p_OE /*tool_pos*/,
+                                    const Eigen::Vector3d &v_OE /*tool_vel*/,
+                                    const Eigen::Vector3d &dv_OE /*tool_acc*/) {
   assert(force_B);
   assert(torque_B);
 
-  dyn_->computeForces(getqPos(), getqVel(), getqAcc(), q_WB,
-                      B_om_WB, B_dom_WB, B_dv_WB,
-                      p_OE, v_OE, dv_OE);
+  dyn_->computeForces(getqPos(), getqVel(), getqAcc(), q_WB, B_om_WB, B_dom_WB,
+                      B_dv_WB, p_OE, v_OE, dv_OE);
 
   Eigen::Vector3d force_O_raw, torque_O_raw, force_B_raw, torque_B_raw;
   dyn_->getBaseWrench(&force_O_raw, &torque_O_raw);
@@ -549,11 +591,14 @@ void DeltaController::getBaseWrench(Eigen::Vector3d* force_B, Eigen::Vector3d* t
   force_B_raw = R_BO * force_O_raw + p_BO_.cross(torque_B_raw);
 
   // if (filter_base_wrench_) {
-  //   if (base_wrench_butterworth_initialized_ && !force_B_raw.hasNaN() && !torque_B_raw.hasNaN()) {
+  //   if (base_wrench_butterworth_initialized_ && !force_B_raw.hasNaN() &&
+  //   !torque_B_raw.hasNaN()) {
   //     Eigen::Vector3d force_B_filtered, torque_B_filtered;
   //     for (int i = 0; i < 3; i++) {
-  //       force_B_filtered(i) = base_force_butterworth_[i].filter(force_B_raw(i));
-  //       torque_B_filtered(i) = base_torque_butterworth_[i].filter(torque_B_raw(i));
+  //       force_B_filtered(i) =
+  //       base_force_butterworth_[i].filter(force_B_raw(i));
+  //       torque_B_filtered(i) =
+  //       base_torque_butterworth_[i].filter(torque_B_raw(i));
   //     }
   //     past_base_force_.push_back(force_B_filtered);
   //     past_base_torque_.push_back(torque_B_filtered);
@@ -564,18 +609,21 @@ void DeltaController::getBaseWrench(Eigen::Vector3d* force_B, Eigen::Vector3d* t
   //     torque_B->setZero();
   //   }
   // } else {
-    *force_B = force_B_raw;
-    *torque_B = torque_B_raw;
+  *force_B = force_B_raw;
+  *torque_B = torque_B_raw;
   // }
 }
 
-void DeltaController::getWorkspaceRegion(int* upper_index, int* lower_index,
-                                         const Eigen::Vector3d& point) {
+void DeltaController::getWorkspaceRegion(int *upper_index, int *lower_index,
+                                         const Eigen::Vector3d &point) {
   // Identify x/y region for upper and lower bounds.
   std::uint_fast8_t region = 0;
-  if (point(1) > 0.0) region |= 0b00000001;
-  if (point(1) > -std::sqrt(3.0) * point(0)) region |= 0b00000010;
-  if (point(1) > std::sqrt(3.0) * point(0)) region |= 0b00000100;
+  if (point(1) > 0.0)
+    region |= 0b00000001;
+  if (point(1) > -std::sqrt(3.0) * point(0))
+    region |= 0b00000010;
+  if (point(1) > std::sqrt(3.0) * point(0))
+    region |= 0b00000100;
 
   *upper_index = 0;
   *lower_index = 0;
@@ -585,8 +633,8 @@ void DeltaController::getWorkspaceRegion(int* upper_index, int* lower_index,
   }
 }
 
-bool DeltaController::projectToWorkspace(Eigen::Vector3d* projection,
-                                         const Eigen::Vector3d& point) {
+bool DeltaController::projectToWorkspace(Eigen::Vector3d *projection,
+                                         const Eigen::Vector3d &point) {
   // Projects to known workspace based on delta parameters.
   // Reuturn True if point is projected, False if already within workspace.
   assert(projection);
@@ -597,18 +645,21 @@ bool DeltaController::projectToWorkspace(Eigen::Vector3d* projection,
   getWorkspaceRegion(&upper_index, &lower_index, point);
 
   // Project down to maximum height
-  point_modified |= projectToHeight(&projected_point, projected_point, params_->max_z(), -1);
+  point_modified |=
+      projectToHeight(&projected_point, projected_point, params_->max_z(), -1);
 
   // Project onto upper bound sphere
-  point_modified |= projectToSphere(&projected_point, point, params_->ub_sphere[upper_index],
-                                    params_->l_D() - params_->ws_buffer(), -1);
+  point_modified |=
+      projectToSphere(&projected_point, point, params_->ub_sphere[upper_index],
+                      params_->l_D() - params_->ws_buffer(), -1);
   // Project up to minimum height
-  point_modified |= projectToHeight(&projected_point, projected_point, params_->min_z(), 1);
+  point_modified |=
+      projectToHeight(&projected_point, projected_point, params_->min_z(), 1);
 
   // Project onto lower bound sphere
-  point_modified |=
-      projectToSphere(&projected_point, projected_point, params_->lb_sphere[lower_index],
-                      params_->l_D() + params_->ws_buffer(), 1);
+  point_modified |= projectToSphere(&projected_point, projected_point,
+                                    params_->lb_sphere[lower_index],
+                                    params_->l_D() + params_->ws_buffer(), 1);
 
   if (point_modified) {
     // Confirm projection is in same region.
@@ -622,8 +673,10 @@ bool DeltaController::projectToWorkspace(Eigen::Vector3d* projection,
   return point_modified;
 }
 
-bool DeltaController::projectToSphere(Eigen::Vector3d* projection, const Eigen::Vector3d& point,
-                                      const Eigen::Vector3d& center, const double& radius,
+bool DeltaController::projectToSphere(Eigen::Vector3d *projection,
+                                      const Eigen::Vector3d &point,
+                                      const Eigen::Vector3d &center,
+                                      const double &radius,
                                       const int direction) {
   assert(projection);
   *projection = point;
@@ -635,8 +688,10 @@ bool DeltaController::projectToSphere(Eigen::Vector3d* projection, const Eigen::
   return false;
 }
 
-bool DeltaController::projectToHeight(Eigen::Vector3d* projection, const Eigen::Vector3d& point,
-                                      const double& height, const int direction) {
+bool DeltaController::projectToHeight(Eigen::Vector3d *projection,
+                                      const Eigen::Vector3d &point,
+                                      const double &height,
+                                      const int direction) {
   assert(projection);
   *projection = point;
   if (direction * point(2) < direction * height) {
@@ -646,7 +701,7 @@ bool DeltaController::projectToHeight(Eigen::Vector3d* projection, const Eigen::
   return false;
 }
 
-double DeltaController::angleWrap(const double& angle, const double& offset) {
+double DeltaController::angleWrap(const double &angle, const double &offset) {
   double x = std::fmod(angle - offset, 2.0 * M_PI);
   if (x < 0) {
     x += 2.0 * M_PI;
@@ -654,7 +709,8 @@ double DeltaController::angleWrap(const double& angle, const double& offset) {
   return x + offset;
 }
 
-Eigen::Vector3d DeltaController::limitVector(Eigen::Vector3d& vec, const double& limit) {
+Eigen::Vector3d DeltaController::limitVector(Eigen::Vector3d &vec,
+                                             const double &limit) {
   Eigen::Vector3d limited_vec = vec;
   double norm = vec.norm();
   if (limit > 1e-8 && norm > limit) {
@@ -663,11 +719,11 @@ Eigen::Vector3d DeltaController::limitVector(Eigen::Vector3d& vec, const double&
   return limited_vec;
 }
 
-Eigen::Matrix3d DeltaController::RotZ(const double& angle) {
+Eigen::Matrix3d DeltaController::RotZ(const double &angle) {
   Eigen::Matrix3d R;
-  R << std::cos(angle), -std::sin(angle), 0.0, std::sin(angle), std::cos(angle), 0.0, 0.0, 0.0, 1.0;
+  R << std::cos(angle), -std::sin(angle), 0.0, std::sin(angle), std::cos(angle),
+      0.0, 0.0, 0.0, 1.0;
   return R;
 }
 
-  
-}
+} // namespace delta_dynamics

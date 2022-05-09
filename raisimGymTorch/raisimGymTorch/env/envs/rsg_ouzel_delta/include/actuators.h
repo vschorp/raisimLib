@@ -10,36 +10,29 @@
 #include <cmath>
 //#include <tinyxml.h>
 
-
 #ifndef RAISIM_SIMULATOR_ACTUATORS_
 #define RAISIM_SIMULATOR_ACTUATORS_
 
 namespace raisim_actuators {
-  class delta_joint {
-    public:
-      delta_joint(double sampleTime);
+class delta_joint {
+public:
+  delta_joint(double sampleTime);
 
-      bool send_cmd(double cmd);
+  bool send_cmd(double cmd);
 
-      void set_angle(double angle);
+  void set_angle(double angle);
 
-      const double getPos() {
-        return x_;
-      }
-      const double getVel() {
-        return xd_;
-      }
-      const double getAcc() {
-        return xdd_;
-      }
+  const double getPos() { return x_; }
+  const double getVel() { return xd_; }
+  const double getAcc() { return xdd_; }
 
-    public: PID pid_;
+public:
+  PID pid_;
 
-    private:
-      double sampleTime_;
-      double x_,xd_,xdd_;
-  };
-}
-
+private:
+  double sampleTime_;
+  double x_, xd_, xdd_;
+};
+} // namespace raisim_actuators
 
 #endif // !RAISIM_SIMULATOR_ACTUATORS_

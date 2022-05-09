@@ -7,7 +7,7 @@
  * https://github.com/berndporr/iir1
  *
  * See Documentation.cpp for contact information, notes, and bibliography.
- * 
+ *
  * -----------------------------------------------------------------
  *
  * License: MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -36,8 +36,8 @@
 #ifndef IIR1_RBJ_H
 #define IIR1_RBJ_H
 
-#include "Common.h"
 #include "Biquad.h"
+#include "Common.h"
 #include "State.h"
 
 namespace Iir {
@@ -47,211 +47,175 @@ namespace Iir {
  *
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
  *
- * These are all 2nd order filters which are tuned with the Q (or Quality factor).
- * The Q factor causes a resonance at the cutoff frequency. The higher the Q
- * factor the higher the responance. If 0.5 < Q < 1/sqrt(2) then there is no resonance peak.
- * Above 1/sqrt(2) the peak becomes more and more pronounced. For bandpass and stopband
- * the Q factor is replaced by the width of the filter. The higher Q the more narrow
- * the bandwidth of the notch or bandpass.
+ * These are all 2nd order filters which are tuned with the Q (or Quality
+ *factor). The Q factor causes a resonance at the cutoff frequency. The higher
+ *the Q factor the higher the responance. If 0.5 < Q < 1/sqrt(2) then there is
+ *no resonance peak. Above 1/sqrt(2) the peak becomes more and more pronounced.
+ *For bandpass and stopband the Q factor is replaced by the width of the filter.
+ *The higher Q the more narrow the bandwidth of the notch or bandpass.
  *
  **/
 
-#define ONESQRT2 (1/sqrt(2))
-	
+#define ONESQRT2 (1 / sqrt(2))
+
 namespace RBJ {
 
-	/** 
-         * The base class of all RBJ filters
-         **/
-	struct DllExport RBJbase : Biquad
-	{
-	public:
-		/// filter operation
-		template <typename Sample>
-			inline Sample filter(Sample s) {
-			return static_cast<Sample>(state.filter((double)s,*this));
-		}
-		/// resets the delay lines to zero
-		void reset() {
-			state.reset();
-		}
-		/// gets the delay lines (=state) of the filter
-		const DirectFormI& getState() {
-			return state;
-		}
-	private:
-		DirectFormI state;
-	};
+/**
+ * The base class of all RBJ filters
+ **/
+struct DllExport RBJbase : Biquad {
+public:
+  /// filter operation
+  template <typename Sample> inline Sample filter(Sample s) {
+    return static_cast<Sample>(state.filter((double)s, *this));
+  }
+  /// resets the delay lines to zero
+  void reset() { state.reset(); }
+  /// gets the delay lines (=state) of the filter
+  const DirectFormI &getState() { return state; }
 
-	/**
-         * Lowpass.
-         **/
-	struct DllExport LowPass : RBJbase
-	{
-		/**
-                 * Calculates the coefficients
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency
-                 * \param q Q factor determines the resonance peak at the cutoff.
-                 **/
-		void setup(double sampleRate,
-			   double cutoffFrequency,
-			   double q = ONESQRT2);
-	};
+private:
+  DirectFormI state;
+};
 
-	/**
-         * Highpass.
-         **/
-	struct DllExport HighPass : RBJbase
-	{
-		/**
-                 * Calculates the coefficients
-                 * \param sampleRate Sampling rate
-                 * \param cutoffFrequency Cutoff frequency
-                 * \param q Q factor determines the resonance peak at the cutoff.
-                 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double q = ONESQRT2);
-	};
+/**
+ * Lowpass.
+ **/
+struct DllExport LowPass : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency
+   * \param q Q factor determines the resonance peak at the cutoff.
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double q = ONESQRT2);
+};
 
-	/**
-         * Bandpass with constant skirt gain
-         **/
-	struct DllExport BandPass1 : RBJbase
-	{
-		/**
-                 * Calculates the coefficients
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the bandpass
-                 * \param bandWidth Bandwidth in octaves
-                 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double bandWidth);
-	};
+/**
+ * Highpass.
+ **/
+struct DllExport HighPass : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency
+   * \param q Q factor determines the resonance peak at the cutoff.
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double q = ONESQRT2);
+};
 
-	/**
-         * Bandpass with constant 0 dB peak gain
-         **/
-	struct DllExport BandPass2 : RBJbase
-	{
-		/**
-                 * Calculates the coefficients
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the bandpass
-                 * \param bandWidth Bandwidth in octaves
-                 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double bandWidth);
-	};
+/**
+ * Bandpass with constant skirt gain
+ **/
+struct DllExport BandPass1 : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the bandpass
+   * \param bandWidth Bandwidth in octaves
+   **/
+  void setup(double sampleRate, double centerFrequency, double bandWidth);
+};
 
-	/**
-         * Bandstop filter. Warning: the bandwidth might not be accurate
-         * for narrow notches.
-         **/
-	struct DllExport BandStop : RBJbase
-	{
-		/**
-                 * Calculates the coefficients
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the bandstop
-                 * \param bandWidth Bandwidth in octaves
-                 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double bandWidth);
-	};
+/**
+ * Bandpass with constant 0 dB peak gain
+ **/
+struct DllExport BandPass2 : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the bandpass
+   * \param bandWidth Bandwidth in octaves
+   **/
+  void setup(double sampleRate, double centerFrequency, double bandWidth);
+};
 
-	/**
-         * Bandstop with Q factor: the higher the Q factor the more narrow is
-         * the notch. 
-         * However, a narrow notch has a long impulse response ( = ringing)
-         * and numerical problems might prevent perfect damping. Practical values
-         * of the Q factor are about Q = 10 to 20. In terms of the design
-         * the Q factor defines the radius of the
-         * poles as r = exp(- pi*(centerFrequency/sampleRate)/q_factor) whereas
-         * the angles of the poles/zeros define the bandstop frequency. The higher
-         * Q the closer r moves towards the unit circle.
-         **/
-	struct DllExport IIRNotch : RBJbase
-	{
-		/**
-                 * Calculates the coefficients
-                 * \param sampleRate Sampling rate
-                 * \param centerFrequency Center frequency of the notch
-                 * \param q_factor Q factor of the notch (1 to ~20)
-                 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double q_factor = 10);
-	};
+/**
+ * Bandstop filter. Warning: the bandwidth might not be accurate
+ * for narrow notches.
+ **/
+struct DllExport BandStop : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the bandstop
+   * \param bandWidth Bandwidth in octaves
+   **/
+  void setup(double sampleRate, double centerFrequency, double bandWidth);
+};
 
-	/**
-         * Low shelf: 0db in the stopband and gainDb in the passband.
-         **/
-	struct DllExport LowShelf : RBJbase
-	{
-		/**
-		 * Calculates the coefficients
-		 * \param sampleRate Sampling rate
-		 * \param cutoffFrequency Cutoff frequency
-		 * \param gainDb Gain in the passband
-                 * \param shelfSlope Slope between stop/passband. 1 = as steep as it can.
-		 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double gainDb,
-			    double shelfSlope = 1);
-	};
+/**
+ * Bandstop with Q factor: the higher the Q factor the more narrow is
+ * the notch.
+ * However, a narrow notch has a long impulse response ( = ringing)
+ * and numerical problems might prevent perfect damping. Practical values
+ * of the Q factor are about Q = 10 to 20. In terms of the design
+ * the Q factor defines the radius of the
+ * poles as r = exp(- pi*(centerFrequency/sampleRate)/q_factor) whereas
+ * the angles of the poles/zeros define the bandstop frequency. The higher
+ * Q the closer r moves towards the unit circle.
+ **/
+struct DllExport IIRNotch : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param centerFrequency Center frequency of the notch
+   * \param q_factor Q factor of the notch (1 to ~20)
+   **/
+  void setup(double sampleRate, double centerFrequency, double q_factor = 10);
+};
 
-	/**
-         * High shelf: 0db in the stopband and gainDb in the passband.
-         **/
-	struct DllExport HighShelf : RBJbase
-	{
-		/**
-		 * Calculates the coefficients
-		 * \param sampleRate Sampling rate
-		 * \param cutoffFrequency Cutoff frequency
-		 * \param gainDb Gain in the passband
-                 * \param shelfSlope Slope between stop/passband. 1 = as steep as it can.
-		 **/
-		void setup (double sampleRate,
-			    double cutoffFrequency,
-			    double gainDb,
-			    double shelfSlope = 1);
-	};
+/**
+ * Low shelf: 0db in the stopband and gainDb in the passband.
+ **/
+struct DllExport LowShelf : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency
+   * \param gainDb Gain in the passband
+   * \param shelfSlope Slope between stop/passband. 1 = as steep as it can.
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double gainDb,
+             double shelfSlope = 1);
+};
 
-	/**
-         * Band shelf: 0db in the stopband and gainDb in the passband.
-         **/
-	struct DllExport BandShelf : RBJbase
-	{
-		/**
-		 * Calculates the coefficients
-		 * \param sampleRate Sampling rate
-		 * \param centerFrequency frequency
-		 * \param gainDb Gain in the passband
-                 * \param bandWidth Bandwidth in octaves
-		 **/
-		void setup (double sampleRate,
-			    double centerFrequency,
-			    double gainDb,
-			    double bandWidth);
-	};
+/**
+ * High shelf: 0db in the stopband and gainDb in the passband.
+ **/
+struct DllExport HighShelf : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param cutoffFrequency Cutoff frequency
+   * \param gainDb Gain in the passband
+   * \param shelfSlope Slope between stop/passband. 1 = as steep as it can.
+   **/
+  void setup(double sampleRate, double cutoffFrequency, double gainDb,
+             double shelfSlope = 1);
+};
 
-	struct DllExport AllPass : RBJbase
-	{
-		void setup (double sampleRate,
-			    double phaseFrequency,
-			    double q);
-	};
-	
-}
+/**
+ * Band shelf: 0db in the stopband and gainDb in the passband.
+ **/
+struct DllExport BandShelf : RBJbase {
+  /**
+   * Calculates the coefficients
+   * \param sampleRate Sampling rate
+   * \param centerFrequency frequency
+   * \param gainDb Gain in the passband
+   * \param bandWidth Bandwidth in octaves
+   **/
+  void setup(double sampleRate, double centerFrequency, double gainDb,
+             double bandWidth);
+};
 
-}
+struct DllExport AllPass : RBJbase {
+  void setup(double sampleRate, double phaseFrequency, double q);
+};
 
+} // namespace RBJ
+
+} // namespace Iir
 
 #endif

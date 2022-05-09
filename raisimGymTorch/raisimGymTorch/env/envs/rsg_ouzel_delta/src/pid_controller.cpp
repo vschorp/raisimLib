@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
-*/
+ */
 
-#include <math.h>
 #include <cmath>
+#include <math.h>
 #include <stdio.h>
 
 #include "../include/pid_controller.h"
@@ -24,21 +24,17 @@
 /////////////////////////////////////////////////
 PID::PID(double _p, double _i, double _d, double _imax, double _imin,
          double _cmdMax, double _cmdMin)
-  : pGain(_p), iGain(_i), dGain(_d), iMax(_imax), iMin(_imin),
-    cmdMax(_cmdMax), cmdMin(_cmdMin)
-{
+    : pGain(_p), iGain(_i), dGain(_d), iMax(_imax), iMin(_imin),
+      cmdMax(_cmdMax), cmdMin(_cmdMin) {
   this->Reset();
 }
 
 /////////////////////////////////////////////////
-PID::~PID()
-{
-}
+PID::~PID() {}
 
 /////////////////////////////////////////////////
 void PID::Init(double _p, double _i, double _d, double _imax, double _imin,
-         double _cmdMax, double _cmdMin)
-{
+               double _cmdMax, double _cmdMin) {
   this->pGain = _p;
   this->iGain = _i;
   this->dGain = _d;
@@ -51,50 +47,28 @@ void PID::Init(double _p, double _i, double _d, double _imax, double _imin,
 }
 
 /////////////////////////////////////////////////
-void PID::SetPGain(double _p)
-{
-  this->pGain = _p;
-}
+void PID::SetPGain(double _p) { this->pGain = _p; }
 
 /////////////////////////////////////////////////
-void PID::SetIGain(double _i)
-{
-  this->iGain = _i;
-}
+void PID::SetIGain(double _i) { this->iGain = _i; }
 
 /////////////////////////////////////////////////
-void PID::SetDGain(double _d)
-{
-  this->dGain = _d;
-}
+void PID::SetDGain(double _d) { this->dGain = _d; }
 
 /////////////////////////////////////////////////
-void PID::SetIMax(double _i)
-{
-  this->iMax = _i;
-}
+void PID::SetIMax(double _i) { this->iMax = _i; }
 
 /////////////////////////////////////////////////
-void PID::SetIMin(double _i)
-{
-  this->iMin = _i;
-}
+void PID::SetIMin(double _i) { this->iMin = _i; }
 
 /////////////////////////////////////////////////
-void PID::SetCmdMax(double _c)
-{
-  this->cmdMax = _c;
-}
+void PID::SetCmdMax(double _c) { this->cmdMax = _c; }
 
 /////////////////////////////////////////////////
-void PID::SetCmdMin(double _c)
-{
-  this->cmdMin = _c;
-}
+void PID::SetCmdMin(double _c) { this->cmdMin = _c; }
 
 /////////////////////////////////////////////////
-void PID::Reset()
-{
+void PID::Reset() {
   this->pErrLast = 0.0;
   this->pErr = 0.0;
   this->iErr = 0.0;
@@ -103,8 +77,7 @@ void PID::Reset()
 }
 
 /////////////////////////////////////////////////
-double PID::Update(double _error, double _dt)
-{
+double PID::Update(double _error, double _dt) {
   double pTerm, dTerm, iTerm;
   this->pErr = _error;
 
@@ -121,20 +94,16 @@ double PID::Update(double _error, double _dt)
   iTerm = this->iGain * this->iErr;
 
   // Limit iTerm so that the limit is meaningful in the output
-  if (iTerm > this->iMax)
-  {
+  if (iTerm > this->iMax) {
     iTerm = this->iMax;
     this->iErr = iTerm / this->iGain;
-  }
-  else if (iTerm < this->iMin)
-  {
+  } else if (iTerm < this->iMin) {
     iTerm = this->iMin;
     this->iErr = iTerm / this->iGain;
   }
 
   // Calculate the derivative error
-  if (_dt != 0)
-  {
+  if (_dt != 0) {
     this->dErr = (this->pErr - this->pErrLast) / _dt;
     this->pErrLast = this->pErr;
   }
@@ -144,72 +113,44 @@ double PID::Update(double _error, double _dt)
   this->cmd = -pTerm - iTerm - dTerm;
 
   // Check the command limits
-  if (this->cmdMax!=0.0 && (this->cmd > this->cmdMax))
+  if (this->cmdMax != 0.0 && (this->cmd > this->cmdMax))
     this->cmd = this->cmdMax;
-  if (this->cmdMin!=0.0 && (this->cmd < this->cmdMin))
+  if (this->cmdMin != 0.0 && (this->cmd < this->cmdMin))
     this->cmd = this->cmdMin;
 
   return this->cmd;
 }
 
 /////////////////////////////////////////////////
-void PID::SetCmd(double _cmd)
-{
-  this->cmd = _cmd;
-}
+void PID::SetCmd(double _cmd) { this->cmd = _cmd; }
 
 /////////////////////////////////////////////////
-double PID::GetCmd()
-{
-  return this->cmd;
-}
+double PID::GetCmd() { return this->cmd; }
 
 /////////////////////////////////////////////////
-void PID::GetErrors(double &_pe, double &_ie, double &_de)
-{
+void PID::GetErrors(double &_pe, double &_ie, double &_de) {
   _pe = this->pErr;
   _ie = this->iErr;
   _de = this->dErr;
 }
 
 /////////////////////////////////////////////////
-double PID::GetPGain() const
-{
-  return this->pGain;
-}
+double PID::GetPGain() const { return this->pGain; }
 
 /////////////////////////////////////////////////
-double PID::GetIGain() const
-{
-  return this->iGain;
-}
+double PID::GetIGain() const { return this->iGain; }
 
 /////////////////////////////////////////////////
-double PID::GetDGain() const
-{
-  return this->dGain;
-}
+double PID::GetDGain() const { return this->dGain; }
 
 /////////////////////////////////////////////////
-double PID::GetIMax() const
-{
-  return this->iMax;
-}
+double PID::GetIMax() const { return this->iMax; }
 
 /////////////////////////////////////////////////
-double PID::GetIMin() const
-{
-  return this->iMin;
-}
+double PID::GetIMin() const { return this->iMin; }
 
 /////////////////////////////////////////////////
-double PID::GetCmdMax() const
-{
-  return this->cmdMax;
-}
+double PID::GetCmdMax() const { return this->cmdMax; }
 
 /////////////////////////////////////////////////
-double PID::GetCmdMin() const
-{
-  return this->cmdMin;
-}
+double PID::GetCmdMin() const { return this->cmdMin; }

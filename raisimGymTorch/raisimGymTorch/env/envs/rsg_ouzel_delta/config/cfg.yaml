@@ -7,7 +7,6 @@ use_adaptive_lr: True
 
 environment:
   render: True
-# just testing commenting
   num_envs: 1 #26
   eval_every_n: 1000 #200
   num_threads: 1 #30
@@ -86,7 +85,7 @@ environment:
         y: 0.0
         z: 0.015
       gravity: 9.81
-  imu:  # from mav_tools/mav_description/urdf/ouzel_base.xacro
+  imu: # from mav_tools/mav_description/urdf/ouzel_base.xacro
     accelerometerBiasCorrelationTime: 300.0
     accelerometerTurnOnBiasSigma: 0.1960
     accelerometerNoiseDensity: 0.004
@@ -118,18 +117,18 @@ environment:
     m_A: 0.06
     # m_P: 0.125
     m_P: 0.425
-    I_Base: {x: 0.0, y: 0.0, z: 0.0}
-    I_O: {x: 0.0, y: 0.0, z: 0.0}
-    I_A: {x: 0.000022, y: 0.0008018, z: 0.000817}
-    I_P: {x: 0.0001368, y: 0.0001439, z: 0.0002548}
-    pCom_Base: {x: 0.0, y: 0.0, z: 0.0}
-    pCom_O: {x: 0.0, y: 0.0, z: 0.0}
-    pCom_A: {x: 0.099, y: 0.0, z: 0.0}
-    pCom_P: {x: 0.0, y: 0.0, z: 0.0016}
-    p_BO: {x: 0.0, y: 0.0, z: -0.073}
-    q_BO: {w: 0.0, x: 1.0, y: 0.0, z: 0.0}
+    I_Base: { x: 0.0, y: 0.0, z: 0.0 }
+    I_O: { x: 0.0, y: 0.0, z: 0.0 }
+    I_A: { x: 0.000022, y: 0.0008018, z: 0.000817 }
+    I_P: { x: 0.0001368, y: 0.0001439, z: 0.0002548 }
+    pCom_Base: { x: 0.0, y: 0.0, z: 0.0 }
+    pCom_O: { x: 0.0, y: 0.0, z: 0.0 }
+    pCom_A: { x: 0.099, y: 0.0, z: 0.0 }
+    pCom_P: { x: 0.0, y: 0.0, z: 0.0016 }
+    p_BO: { x: 0.0, y: 0.0, z: -0.073 }
+    q_BO: { w: 0.0, x: 1.0, y: 0.0, z: 0.0 }
 
 architecture:
-  policy_net: [64, 256, 64]
-  value_net: [64, 64]
+  policy_net: [ 64, 256, 64 ]
+  value_net: [ 64, 64 ]
 
