@@ -1,17 +1,17 @@
 seed: 1
 record_video: yes
 activation: tanh
-on_cluster: True
+on_cluster: False
 learning_rate: 5e-4
-use_adaptive_lr: True
+use_adaptive_lr: False
 
 environment:
   render: True
-  num_envs: 1 #26
-  eval_every_n: 1000 #200
-  num_threads: 1 #30
+  num_envs: 1
+  eval_every_n: 100
+  num_threads: 1
   simulation_dt: 0.0025
-  control_dt: 0.01
+  control_dt: 0.005
   max_time: 4.0
   reward:
     waypointDist:
@@ -28,20 +28,20 @@ environment:
       coeff: -1.0e1
   termination:
     oob:
-      reward: -10.0
+      reward: -1000.0
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 10.0
+      reward: 100.0
       waypointDist: 0.05
-      angleErrorDeg: 3.0
+      angleErrorDeg: 5.0
       linearVel: 0.01
-      angularVelDeg: 1.0
+      angularVelDeg: 0.1
   initialisation:
-    distanceOffset: 1.5 #1.5
-    angleOffsetDeg: 45.0 #45.0
-    linearVel: 0.2 #0.1
-    angularVelDeg: 5.0 #5.0
+    distanceOffset: 1.5
+    angleOffsetDeg: 45.0
+    linearVel: 0.2
+    angularVelDeg: 5.0
   controller:
     use_ext_wrench: 0.0
     x_gain: 1.0
@@ -58,7 +58,7 @@ environment:
     ang_d_gain: 12.0
     pos_err_max: 0.0
     max_linear_accel: 7.0
-    max_angular_accel: 50 #1.5 50
+    max_angular_accel: 50
     position_integrator_limit: 1.0
     attitude_integrator_limit: 1.0
     tool_virtual_mass: 1.0
@@ -100,10 +100,10 @@ environment:
     linkName: ouzel/base_link
     childFrameId: ouzel
   odometryNoise:
-    pos_std: 1.0e-4 #1.0e-1
-    orient_std: 1.0e-4 #1.0e-1
-    lin_vel_std: 5.0e-3 #5.0e-1
-    ang_vel_std: 5.0e-3 #5.0e-1
+    pos_std: 1.0e-4
+    orient_std: 1.0e-4
+    lin_vel_std: 5.0e-3
+    ang_vel_std: 5.0e-3
   deltaArm:
     r_B: 0.075
     r_T: 0.028
@@ -131,4 +131,3 @@ environment:
 architecture:
   policy_net: [ 64, 256, 64 ]
   value_net: [ 64, 64 ]
-

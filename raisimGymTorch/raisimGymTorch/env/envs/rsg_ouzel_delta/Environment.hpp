@@ -187,8 +187,9 @@ public:
     // delta arm
     Eigen::Vector3d desired_joint_pos(actionD.tail(3));
     Eigen::Vector3d desired_clamped_joint_pos = desired_joint_pos;
-    std::cout << "desired_clamped_joint_pos: " << desired_clamped_joint_pos
-              << std::endl;
+    //    std::cout << "desired_clamped_joint_pos: " <<
+    //    desired_clamped_joint_pos
+    //              << std::endl;
     std::clamp(desired_clamped_joint_pos(0), delta_min_joint_angle_,
                delta_max_joint_angle_);
     std::clamp(desired_clamped_joint_pos(1), delta_min_joint_angle_,
@@ -360,9 +361,10 @@ public:
     //    std::cout << "odometry_measurement gt: " << odometry_measurement_gt <<
     //    std::endl;
 
-    std::cout << "delta_joint_angle_: " << delta_joint_angle_ << std::endl;
-    std::cout << "delta_joint_angular_vel_: " << delta_joint_angular_vel_
-              << std::endl;
+    //    std::cout << "delta_joint_angle_: " << delta_joint_angle_ <<
+    //    std::endl; std::cout << "delta_joint_angular_vel_: " <<
+    //    delta_joint_angular_vel_
+    //              << std::endl;
 
     if (!Eigen::isfinite(gc_.array()).all()) {
       std::cout << "gc is nan!!" << std::endl;
