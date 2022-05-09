@@ -44,6 +44,25 @@ static constexpr double kDefaultSensorTimeout =
 static constexpr double kDefaultPosErrorMax =
     0.0; ///< 0 means position error not limited.
 
+class lowpassWrench {
+public:
+  lowpassWrench(Eigen::Vector3d initForce, Eigen::Vector3d initTorque) {
+    forceState_ = initForce;
+    torqueState_ = initTorque;
+  }
+  void update(Eigen::Vector3d force, Eigen::Vector3d torque, double cutoff_rad,
+              double dt) {
+    forceState_ += (force - forceState_) * cutoff_rad * dt;
+    torqueState_ += (torque - torqueState_) * cutoff_rad * dt;
+  }
+  Eigen::VectorXd getForce() { return forceState_; }
+  Eigen::VectorXd getTorque() { return torqueState_; }
+
+private:
+  Eigen::Vector3d forceState_;
+  Eigen::Vector3d torqueState_;
+};
+
 /// controller parameters
 struct ImpedanceControlModuleParameters {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -278,6 +297,10 @@ private:
 
   Eigen::Vector3d ref_position_;
   Eigen::Quaterniond ref_quaternion_;
+
+  lowpassWrench *commandFilter_;
+  bool initWrenchFilter_;
+  double lowPassFilterCutOffFrequency_ = 40.0;
 };
 
 } // namespace rw_omav_controllers

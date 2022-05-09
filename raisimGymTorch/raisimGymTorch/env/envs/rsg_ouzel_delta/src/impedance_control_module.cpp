@@ -20,6 +20,7 @@ namespace rw_omav_controllers {
 ImpedanceControlModule::ImpedanceControlModule(const Yaml::Node &cfg) {
   setControllerParameters(cfg);
   T_T_B_ = Eigen::Affine3d::Identity();
+  initWrenchFilter_ = false;
 }
 
 void ImpedanceControlModule::calculateWrenchCommand(
@@ -47,7 +48,8 @@ void ImpedanceControlModule::calculateWrenchCommand(
   //      computeToolError(&tool_position_error_B, &tool_velocity_error_B);
 
   // Update all integrators.
-  updateIntegrators(R_W_B * position_error_B, attitude_error_B, sampling_time);
+  //  updateIntegrators(R_W_B * position_error_B, attitude_error_B,
+  //  sampling_time);
 
   //--------------------------------------------------------//
   // Selective Impedance Control for disturbance rejection. //
@@ -135,13 +137,18 @@ void ImpedanceControlModule::calculateWrenchCommand(
   Eigen::Vector3d moment_ff = mass_ * com_offset_.cross(linear_accel_B_des);
   angular_accel_B_des += inertia_.inverse() * moment_ff;
 
-  (*wrench_command).thrust = mass_ * linear_accel_B_des;
-  (*wrench_command).torque = inertia_ * angular_accel_B_des;
+  // Init filter with first received commands
+  if (!initWrenchFilter_) {
+    commandFilter_ = new lowpassWrench(linear_accel_B_des, angular_accel_B_des);
+    initWrenchFilter_ = true;
+  }
+  // Filter with 40.0rad cutoff frequency. Filter runs at 200hz (same sampling
+  // rate of the controller)
+  commandFilter_->update(linear_accel_B_des, angular_accel_B_des,
+                         lowPassFilterCutOffFrequency_, sampling_time);
 
-  //      if (wrench_command->thrust.norm() > 1000 ||
-  //      wrench_command->torque.norm() > 1000) {
-  //        std::cout << "warning: high wrench" << std::endl;
-  //      }
+  (*wrench_command).thrust = mass_ * commandFilter_->getForce();
+  (*wrench_command).torque = inertia_ * commandFilter_->getTorque();
 }
 
 void ImpedanceControlModule::computeForceControlCommand(

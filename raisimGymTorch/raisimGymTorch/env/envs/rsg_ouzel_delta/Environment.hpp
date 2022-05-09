@@ -324,7 +324,7 @@ public:
     bodyLinearVel_ = odometry_measurement.segment(7, 3);
     bodyAngularVel_ = odometry_measurement.segment(10, 3);
 
-    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeas();
+    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
     position_W_gt_ = odometry_measurement_gt.segment(0, 3);
     orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3),
                                              odometry_measurement_gt(4),
@@ -365,7 +365,7 @@ public:
               << std::endl;
 
     if (!Eigen::isfinite(gc_.array()).all()) {
-      std::cout << "ob is nan!!" << std::endl;
+      std::cout << "gc is nan!!" << std::endl;
       std::cout << "odometry : " << odometry_measurement << std::endl;
       std::cout << "gc : " << gc_ << std::endl;
       std::cout << "gv : " << gv_ << std::endl;
@@ -375,12 +375,12 @@ public:
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     /// convert it to float
-    Eigen::Vector3d position_CR_W =
-        ref_position_ - end_effector_pos_W_; // CR for current to reference
+    Eigen::Vector3d position_RC_W =
+        position_W_ - ref_position_; // RC for ref to current
     Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
     Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix();
     Eigen::VectorXd ob_double(obDim_);
-    ob_double << position_CR_W, orientation_W_B_mat.col(0),
+    ob_double << position_RC_W, orientation_W_B_mat.col(0),
         orientation_W_B_mat.col(1), orientation_W_B_mat.col(2), bodyLinearVel_,
         bodyAngularVel_, ref_orientation_mat.col(0), ref_orientation_mat.col(1),
         ref_orientation_mat.col(2), delta_joint_angle_,
