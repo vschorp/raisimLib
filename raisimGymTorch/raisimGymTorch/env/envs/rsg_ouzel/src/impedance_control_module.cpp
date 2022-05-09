@@ -138,8 +138,8 @@ void ImpedanceControlModule::calculateWrenchCommand(
   }
   // Filter with 40.0rad cutoff frequency. Filter runs at 200hz (same sampling
   // rate of the controller)
-  commandFilter_->update(linear_accel_B_des, angular_accel_B_des, 40.0,
-                         1.0 / 200);
+  commandFilter_->update(linear_accel_B_des, angular_accel_B_des,
+                         lowPassFilterCutOffFrequency_, sampling_time);
 
   (*wrench_command).thrust = mass_ * commandFilter_->getForce();
   (*wrench_command).torque = inertia_ * commandFilter_->getTorque();

@@ -300,6 +300,7 @@ private:
 
   lowpassWrench *commandFilter_;
   bool initWrenchFilter_;
+  double lowPassFilterCutOffFrequency_ = 40.0;
 };
 
 } // namespace rw_omav_controllers
