@@ -37,18 +37,13 @@ void ImpedanceControlModule::calculateWrenchCommand(
   computeStateError(&position_error_B, &velocity_error_B, &attitude_error_B,
                     &rate_error_B);
 
-  //      std::cout << "position error B: " << position_error_B.norm() <<
-  //      std::endl; std::cout << "attitude error B: " <<
-  //      attitude_error_B.norm() << std::endl; std::cout << "lin vel error B: "
-  //      << velocity_error_B.norm() << std::endl; std::cout << "rate error
-  //      error B: " << rate_error_B.norm() << std::endl;
-
   // unused tool_error variables
   //      Eigen::Vector3d tool_position_error_B, tool_velocity_error_B;
   //      computeToolError(&tool_position_error_B, &tool_velocity_error_B);
 
   // Update all integrators.
-  //  updateIntegrators(R_W_B * position_error_B, attitude_error_B, sampling_time);
+  //  updateIntegrators(R_W_B * position_error_B, attitude_error_B,
+  //  sampling_time);
 
   //--------------------------------------------------------//
   // Selective Impedance Control for disturbance rejection. //
@@ -148,11 +143,6 @@ void ImpedanceControlModule::calculateWrenchCommand(
 
   (*wrench_command).thrust = mass_ * commandFilter_->getForce();
   (*wrench_command).torque = inertia_ * commandFilter_->getTorque();
-
-  //      if (wrench_command->thrust.norm() > 1000 ||
-  //      wrench_command->torque.norm() > 1000) {
-  //        std::cout << "warning: high wrench" << std::endl;
-  //      }
 }
 
 void ImpedanceControlModule::computeForceControlCommand(
@@ -174,11 +164,6 @@ void ImpedanceControlModule::computeForceControlCommand(
 }
 
 void ImpedanceControlModule::setControllerParameters(const Yaml::Node &cfg) {
-  // general config
-  //      std::cout << cfg["use_ext_wrench"].template As<int>() << std::endl;
-  //      std::cout << cfg["x_gain"].template As<float>() << std::endl;
-  //      std::cout << cfg["use_force_control"].template As<bool>() <<
-  //      std::endl;
   control_params_.use_ext_wrench =
       int(cfg["use_external_wrench"].template As<float>());
 
@@ -257,10 +242,6 @@ void ImpedanceControlModule::setControllerParameters(const Yaml::Node &cfg) {
       cfg["vehicle_params"]["inertia"]["xz"].template As<float>(),
       cfg["vehicle_params"]["inertia"]["yz"].template As<float>(),
       cfg["vehicle_params"]["inertia"]["zz"].template As<float>();
-//      std::cout << "controller mass_: " << mass_ << std::endl;
-//      std::cout << "controller com_offset_: " << com_offset_ << std::endl;
-//      std::cout << "controller inertia_: " << inertia_ << std::endl;
-
 }
 
 void ImpedanceControlModule::computeStateError(
@@ -282,8 +263,6 @@ void ImpedanceControlModule::computeStateError(
   Eigen::Matrix3d attitude_error_matrix =
       0.5 * (R_W_B_des.transpose() * R_W_B - R_W_B.transpose() * R_W_B_des);
   Eigen::Vector3d att_error_B;
-  //      std::cout << "rwb des:\n" << R_W_B_des << std::endl;
-  //      std::cout << "rwb:\n" << R_W_B << std::endl;
   mav_msgs::vectorFromSkewMatrix(attitude_error_matrix, &att_error_B);
   *attitude_error_B = att_error_B;
   *rate_error_B = odom_.angular_velocity_B -
@@ -512,13 +491,9 @@ void ImpedanceControlModule::setRefFromAction(
 
   ref_.orientation_W_B = ref_quaternion_;
   ref_.orientation_W_B = ref_.orientation_W_B * _orientation_corr;
-  //      ref_.orientation_W_B = _orientation_corr;
   if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
     std::cout << "ref orientation is nan!!" << std::endl;
   }
-  //      std::cout << "corrected ref pos impedance ctrl: " << ref_.position_W
-  //      << std::endl; std::cout << "corrected ref orient impedance ctrl
-  //      coeffs: " << ref_.orientation_W_B.coeffs() << std::endl;
 }
 
 void ImpedanceControlModule::setRef(const Eigen::Vector3d &_position,
@@ -528,8 +503,6 @@ void ImpedanceControlModule::setRef(const Eigen::Vector3d &_position,
 
   ref_.position_W = ref_position_;
   ref_.orientation_W_B = ref_quaternion_;
-  //      ref_.position_W = Eigen::Vector3d::Zero();
-  //      ref_.orientation_W_B = Eigen::Quaterniond::Identity();
 }
 
 } // namespace rw_omav_controllers
