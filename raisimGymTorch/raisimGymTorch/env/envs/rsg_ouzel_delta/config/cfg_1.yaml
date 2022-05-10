@@ -104,7 +104,7 @@ environment:
     orient_std: 1.0e-4
     lin_vel_std: 5.0e-3
     ang_vel_std: 5.0e-3
-  deltaArm:
+  deltaArm: #from delta_control/resources/delta_control_params_sim.yaml
     r_B: 0.075
     r_T: 0.028
     l_P: 0.156
