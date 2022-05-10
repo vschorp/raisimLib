@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <boost/algorithm/clamp.hpp>
 #include <functional>
 #include <set>
 #include <stdlib.h>
@@ -190,12 +191,12 @@ public:
     //    std::cout << "desired_clamped_joint_pos: " <<
     //    desired_clamped_joint_pos
     //              << std::endl;
-    std::clamp(desired_clamped_joint_pos(0), delta_min_joint_angle_,
-               delta_max_joint_angle_);
-    std::clamp(desired_clamped_joint_pos(1), delta_min_joint_angle_,
-               delta_max_joint_angle_);
-    std::clamp(desired_clamped_joint_pos(2), delta_min_joint_angle_,
-               delta_max_joint_angle_);
+    boost::algorithm::clamp(desired_clamped_joint_pos(0),
+                            delta_min_joint_angle_, delta_max_joint_angle_);
+    boost::algorithm::clamp(desired_clamped_joint_pos(1),
+                            delta_min_joint_angle_, delta_max_joint_angle_);
+    boost::algorithm::clamp(desired_clamped_joint_pos(2),
+                            delta_min_joint_angle_, delta_max_joint_angle_);
     delta_sym_->sendActuatorsCommand(desired_clamped_joint_pos);
 
     //    std::cout << "base link idx: " <<
