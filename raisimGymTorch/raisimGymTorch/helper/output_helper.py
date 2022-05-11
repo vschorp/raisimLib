@@ -110,29 +110,24 @@ class EvaluationVisualizer:
             self.action_delta_angles_all[step, :] = delta_angles
 
     def visualize(self):
+        plt.figure(figsize=[20, 10])
         if self.is_delta:
-            plt.figure(figsize=[20, 10])
             plt.plot(self.ref_delta_position_offset_W_all[:, 0], 'r-', label='ref_delta_position_offset_W_x')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 1], 'g-',label='ref_delta_position_offset_W_y')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 1], 'g-', label='ref_delta_position_offset_W_y')
             plt.plot(self.ref_delta_position_offset_W_all[:, 2], 'b-', label='ref_delta_position_offset_W_z')
             plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r--', label='ref_ouzel_position_offset_W_x')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g--',label='ref_ouzel_position_offset_W_y')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g--', label='ref_ouzel_position_offset_W_y')
             plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b--', label='ref_ouzel_position_offset_W_z')
-            plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_corr_pos_W_all_x')
-            plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
-            plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
-            plt.legend()
-            plt.savefig(self.save_path + "pos_delta.png")
         else:
             plt.figure(figsize=[20, 10])
             plt.plot(self.pos_RC_W_all[:, 0], 'r-', label='pos_RC_W_all_x')
-            plt.plot(self.pos_RC_W_all[:, 1], 'g-',label='pos_RC_W_all_y')
+            plt.plot(self.pos_RC_W_all[:, 1], 'g-', label='pos_RC_W_all_y')
             plt.plot(self.pos_RC_W_all[:, 2], 'b-', label='pos_RC_W_all_z')
-            plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_corr_pos_W_all_x')
-            plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
-            plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
-            plt.legend()
-            plt.savefig(self.save_path + "pos.png")
+        plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_corr_pos_W_all_x')
+        plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
+        plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
+        plt.legend()
+        plt.savefig(self.save_path + "pos.png")
 
         orient_W_all_rot = Rotation.from_quat(self.orient_quat_W_all)
         body_orient_euler_W_all = orient_W_all_rot.as_euler("xyz")
