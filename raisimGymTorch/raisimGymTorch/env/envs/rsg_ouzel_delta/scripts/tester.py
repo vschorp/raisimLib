@@ -72,7 +72,7 @@ else:
 
     max_steps = 1000  ## 10 secs
 
-    eval_visualizer = EvaluationVisualizer(max_steps, ob_dim, task_path)
+    eval_visualizer = EvaluationVisualizer(max_steps, ob_dim, task_path, is_delta=True)
     # eval_visualizer.load_normalization_params(weight_dir, iteration_number)
 
     for step in range(max_steps):
@@ -81,7 +81,7 @@ else:
         obs = env.observe(False)
         # print(obs)
         action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
-        action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0]])
+        action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
         reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
         reward_ll_sum = reward_ll_sum + reward_ll[0]
         eval_visualizer.parse_obs(obs, step)
