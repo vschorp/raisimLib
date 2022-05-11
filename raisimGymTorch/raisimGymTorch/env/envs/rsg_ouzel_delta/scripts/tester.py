@@ -73,7 +73,7 @@ else:
     max_steps = 1000  ## 10 secs
 
     eval_visualizer = EvaluationVisualizer(max_steps, ob_dim, task_path, is_delta=True)
-    # eval_visualizer.load_normalization_params(weight_dir, iteration_number)
+    eval_visualizer.load_normalization_params(weight_dir, iteration_number)
 
     for step in range(max_steps):
         if visualize_simulation:
