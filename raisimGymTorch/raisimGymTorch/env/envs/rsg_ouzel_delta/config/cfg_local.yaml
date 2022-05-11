@@ -19,11 +19,11 @@ environment:
     orientError:
       coeff: -1.0
     linearRefCorr:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
     orientRefCorr:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
     deltaJointAngles:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
     deltaJointAnglesClamp:
       coeff: -1.0e1
   termination:
@@ -32,7 +32,7 @@ environment:
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 100.0
+      reward: 1000.0
       waypointDist: 0.05
       angleErrorDeg: 5.0
       linearVel: 0.01
