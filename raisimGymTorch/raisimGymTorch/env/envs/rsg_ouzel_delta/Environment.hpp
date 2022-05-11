@@ -25,6 +25,8 @@ public:
                        bool visualizable)
       : RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable),
         unifDistPlusMinusOne_(-1.0, 1.0), controller_(cfg["controller"]) {
+    render_ = cfg["render"].template As<bool>();
+
     /// create world
     world_ = std::make_unique<raisim::World>();
     /// add objects
@@ -66,10 +68,12 @@ public:
     /// initialize delta
     delta_sym_ =
         new delta_dynamics::DeltaController(cfg_["deltaArm"], control_dt_);
-    delta_eef_ = world_->addCylinder(0.005, 0.002, 0.01, "default",
-                                     raisim::COLLISION(15));
-    delta_eef_->setPosition(2, 2, 2);
-    delta_eef_->setBodyType(raisim::BodyType::STATIC);
+    if (render_) {
+      delta_eef_ = world_->addCylinder(0.05, 0.008, 0.01, "default",
+                                       raisim::COLLISION(15));
+      delta_eef_->setPosition(2, 2, 2);
+      delta_eef_->setBodyType(raisim::BodyType::STATIC);
+    }
     ee_vel_prev_ = Eigen::Vector3d::Zero();
     pos_offset_BD_ = Eigen::Vector3d(0.00363497, -0.00548676, -0.07537646);
     ang_offset_BD_ =
@@ -234,9 +238,9 @@ public:
 
       Eigen::Vector3d ee_pos, ee_vel, ee_acc;
       delta_sym_->fwkinPosition(&ee_pos);
-      std::cout << "delta_pos_ in delta frame: " << ee_pos << std::endl;
+      //      std::cout << "delta_pos_ in delta frame: " << ee_pos << std::endl;
       delta_sym_->fwkinVel(&ee_vel, ee_pos);
-      ee_acc = (ee_vel - ee_vel_prev_) / control_dt_;
+      ee_acc = (ee_vel - ee_vel_prev_) / simulation_dt_;
       ee_vel_prev_ = ee_vel;
 
       Eigen::Vector3d B_dv_WB =
@@ -245,7 +249,7 @@ public:
       Eigen::Vector3d B_om_WB =
           ouzel_orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
           ouzel_angular_vel_B_gt_;
-      Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_) / control_dt_;
+      Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_) / simulation_dt_;
       B_om_WB_prev_ = B_om_WB;
 
       // Compute feed forward base wrench due to dynamics.
@@ -253,33 +257,19 @@ public:
       delta_sym_->getBaseWrench(&force_B, &torque_B, ouzel_orientation_W_B_gt_,
                                 B_om_WB, B_dom_WB, B_dv_WB, ee_pos, ee_vel,
                                 ee_acc);
-
-      Eigen::Vector3d base_pos_W(ouzel_->getGeneralizedCoordinate()[0],
-                                 ouzel_->getGeneralizedCoordinate()[1],
-                                 ouzel_->getGeneralizedCoordinate()[2]);
-      Eigen::Vector3d eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
-                                  ouzel_orientation_W_B_gt_.toRotationMatrix() *
-                                      ang_offset_BD_.matrix() * ee_pos;
-      delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
-      std::cout << "eef_pos_W: " << eef_pos_W << std::endl;
-      delta_eef_->setOrientation(ouzel_orientation_W_B_gt_);
-
       ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME, force_B,
                                ouzel_->BODY_FRAME, orig);
       ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
-      //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"),
-      //      ouzel_->BODY_FRAME, wrench_command.thrust, ouzel_->BODY_FRAME,
-      //      orig); // set force in body frame
-      //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"),
-      //      ouzel_->WORLD_FRAME, levitation_force_W, ouzel_->WORLD_FRAME,
-      //      ouzel_->getCOM()); // set force in body frame
-      //      ouzel_->setExternalForce(ouzel_->getBodyIdx("ouzel/base_link"),
-      //      ouzel_->BODY_FRAME, levitation_force_B, ouzel_->WORLD_FRAME,
-      //      ouzel_->getCOM()); // set force in body frame
-      //      ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"),
-      //      test_torque_B);
-      //      ouzel_->setExternalTorqueInBodyFrame(ouzel_->getBodyIdx("ouzel/base_link"),
-      //      wrench_command.torque);
+
+      if (render_) {
+        Eigen::Vector3d eef_pos_W =
+            ouzel_position_W_gt_ + pos_offset_BD_ +
+            ouzel_orientation_W_B_gt_.toRotationMatrix() *
+                ang_offset_BD_.matrix() * ee_pos;
+        delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
+        //      std::cout << "eef_pos_W: " << eef_pos_W << std::endl;
+        delta_eef_->setOrientation(ouzel_orientation_W_B_gt_);
+      }
 
       if (server_)
         server_->lockVisualizationServerMutex();
@@ -291,6 +281,7 @@ public:
     // get observations
     updateObservation();
 
+    // get rewards
     double waypoint_dist_delta, error_angle;
     computeErrorMetrics(waypoint_dist_delta, error_angle);
     Eigen::AngleAxisd ref_ouzel_orientation_corr_angle_axis(
@@ -302,7 +293,7 @@ public:
     //    float(ref_ouzel_orientation_corr_angle_axis.angle()) << std::endl;
     rewards_.record("waypointDist", float(waypoint_dist_delta));
     rewards_.record("orientError", float(error_angle));
-    rewards_.record("linearRefCorr",
+    rewards_.record("deltaOuzelRefPositionOffset",
                     float(delta_ouzel_ref_position_offset.squaredNorm()));
     rewards_.record("orientRefCorr",
                     float(ref_ouzel_orientation_corr_angle_axis.angle()));
@@ -313,13 +304,6 @@ public:
     rewards_.record(
         "deltaJointAnglesClamp",
         float((ref_delta_joint_pos - ref_delta_joint_pos_clamped).norm()));
-    //    rewards_.record("angularVel",
-    //    anymal_->getGeneralizedForce().squaredNorm());
-    //    rewards_.record("force",
-    //    anymal_->getGeneralizedForce().squaredNorm());
-    //    rewards_.record("torque",
-    //    anymal_->getGeneralizedForce().squaredNorm());
-
     return rewards_.sum();
   }
 
@@ -346,10 +330,13 @@ public:
 
     delta_joint_angle_ = delta_sym_->getqPos();
     delta_joint_angular_vel_ = delta_sym_->getqVel();
-    std::cout << "delta_joint_angle_: " << delta_joint_angle_ << std::endl;
+    //    std::cout << "delta_joint_angle_: " << delta_joint_angle_ <<
+    //    std::endl;
 
     Eigen::Vector3d end_effector_position_D;
     delta_sym_->fwkinPosition(&end_effector_position_D);
+    //    std::cout << "delta pos in B frame: " << end_effector_position_D
+    //              << std::endl;
     delta_position_W_ = ouzel_position_W_ + pos_offset_BD_ +
                         ouzel_orientation_W_B_.toRotationMatrix() *
                             ang_offset_BD_.matrix() * end_effector_position_D;
@@ -360,9 +347,9 @@ public:
 
     ouzel_->getState(gc_, gv_);
 
-    //    std::cout << "odometry_measurement: " << odometry_measurement <<
-    //    std::endl;
-    std::cout << "ouzel position W: " << ouzel_position_W_ << std::endl;
+    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
+    //    std::cout << "ouzel position W: " << ouzel_position_W_ << std::endl;
+    //    std::cout << "delta position W: " << delta_position_W_ << std::endl;
     //        std::cout << "ouzel_orientation_W_B_ coeffs: " <<
     //    ouzel_orientation_W_B_.coeffs()
     //    << std::endl; std::cout << "ouzel_linear_vel_B_: " <<
@@ -405,6 +392,8 @@ public:
         ref_ouzel_orientation_mat.col(1), ref_ouzel_orientation_mat.col(2),
         delta_joint_angle_, delta_joint_angular_vel_;
     ob = ob_double.cast<float>();
+    //    std::cout << "ob_double_: " << ob_double << std::endl;
+    //    std::cout << "ob: " << ob << std::endl;
     //    std::cout << "ouzel_orientation_W_B_ coeffs: \n" <<
     //    ouzel_orientation_W_B_.coeffs() << std::endl; std::cout <<
     //    "ouzel_orientation_W_B_mat: \n" << ouzel_orientation_W_B_mat <<
@@ -575,6 +564,7 @@ private:
 
   int gcDim_, gvDim_, nJoints_;
   bool visualizable_ = false;
+  bool render_ = false;
   raisim::ArticulatedSystem *ouzel_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, pTarget_, pTarget12_, vTarget_;
   double initialDistanceOffset_;

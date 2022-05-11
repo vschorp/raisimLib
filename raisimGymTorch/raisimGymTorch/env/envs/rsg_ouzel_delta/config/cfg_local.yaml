@@ -18,7 +18,7 @@ environment:
       coeff: -1.0
     orientError:
       coeff: -1.0
-    linearRefCorr:
+    deltaOuzelRefPositionOffset:
       coeff: -1.0e-2
     orientRefCorr:
       coeff: -1.0e-2
@@ -120,16 +120,47 @@ environment:
     m_O: 0.46
     m_A: 0.06
     m_P: 0.125
-    I_Base: { x: 0.001582, y: 0.001270, z: 0.002825 }
-    I_O: { x: 0.001696, y: 0.001696, z: 0.003059 }
-    I_A: { x: 0.000022, y: 0.0008018, z: 0.000817 }
-    I_P: { x: 0.0001368, y: 0.0001439, z: 0.0002548 }
-    pCom_Base: { x: 0.0, y: 0.0, z: 0.003 }
-    pCom_O: { x: 0.0, y: 0.0, z: -0.004 }
-    pCom_A: { x: 0.099, y: 0.0, z: 0.0 }
-    pCom_P: { x: 0.0, y: 0.0, z: 0.0016 }
-    p_BO: { x: 0.0, y: 0.0, z: 0.065 }
-    q_BO: { w: 1.0, x: 0.0, y: 0.0, z: 0.0 }
+    I_Base:
+      x: 0.001582
+      y: 0.001270
+      z: 0.002825
+    I_O:
+      x: 0.001696
+      y: 0.001696
+      z: 0.003059
+    I_A:
+      x: 0.000022
+      y: 0.0008018
+      z: 0.000817
+    I_P:
+      x: 0.0001368
+      y: 0.0001439
+      z: 0.0002548
+    pCom_Base:
+      x: 0.0
+      y: 0.0
+      z: 0.003
+    pCom_O:
+      x: 0.0
+      y: 0.0
+      z: -0.004
+    pCom_A:
+      x: 0.099
+      y: 0.0
+      z: 0.0
+    pCom_P:
+      x: 0.0
+      y: 0.0
+      z: 0.0016
+    p_BO:
+      x: 0.0
+      y: 0.0
+      z: 0.065
+    q_BO:
+      w: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
 
 architecture:
   policy_net: [ 64, 256, 64 ]
