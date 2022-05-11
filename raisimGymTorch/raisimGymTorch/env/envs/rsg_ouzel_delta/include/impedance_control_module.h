@@ -146,10 +146,11 @@ public:
                const Eigen::Vector3d &_velocity_body,
                const Eigen::Vector3d &_angular_velocity);
 
-  void setRefFromAction(const Eigen::Vector3d &_position_corr,
-                        const Eigen::Quaterniond &_orientation_corr_mat);
-  void setRef(const Eigen::Vector3d &_position,
-              const Eigen::Quaterniond &_orientation);
+  void
+  adaptRefFromAction(const Eigen::Vector3d &_delta_ouzel_ref_position_offset_W,
+                     const Eigen::Quaterniond &_ouzel_orientation_corr_mat);
+  void setRef(const Eigen::Vector3d &_ref_delta_position_W,
+              const Eigen::Quaterniond &_ref_ouzel_orientation_WB);
 
 private:
   /**
@@ -295,8 +296,8 @@ private:
   Eigen::Vector3d com_offset_;
   Eigen::Matrix3d inertia_;
 
-  Eigen::Vector3d ref_position_;
-  Eigen::Quaterniond ref_quaternion_;
+  Eigen::Vector3d ref_position_delta_W;
+  Eigen::Quaterniond ref_quaternion_ouzel_W;
 
   lowpassWrench *commandFilter_;
   bool initWrenchFilter_;

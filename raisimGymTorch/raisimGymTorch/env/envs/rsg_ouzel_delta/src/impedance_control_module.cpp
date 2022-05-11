@@ -493,17 +493,17 @@ void ImpedanceControlModule::setOdom(const Eigen::Vector3d &_position,
   odom_.angular_velocity_B = _angular_velocity;
 }
 
-void ImpedanceControlModule::setRefFromAction(
-    const Eigen::Vector3d &_position_corr,
-    const Eigen::Quaterniond &_orientation_corr) {
-  ref_.position_W = ref_position_;
-  ref_.position_W += _position_corr;
+void ImpedanceControlModule::adaptRefFromAction(
+    const Eigen::Vector3d &_delta_ouzel_ref_position_offset_W,
+    const Eigen::Quaterniond &_ouzel_orientation_corr_mat) {
+  ref_.position_W = ref_position_delta_W;
+  ref_.position_W += _delta_ouzel_ref_position_offset_W;
   if (!Eigen::isfinite(ref_.position_W.array()).any()) {
     std::cout << "ref position is nan!!" << std::endl;
   }
 
-  ref_.orientation_W_B = ref_quaternion_;
-  ref_.orientation_W_B = ref_.orientation_W_B * _orientation_corr;
+  ref_.orientation_W_B = ref_quaternion_ouzel_W;
+  ref_.orientation_W_B = ref_.orientation_W_B * _ouzel_orientation_corr_mat;
   //      ref_.orientation_W_B = _orientation_corr;
   if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
     std::cout << "ref orientation is nan!!" << std::endl;
@@ -513,13 +513,14 @@ void ImpedanceControlModule::setRefFromAction(
   //      coeffs: " << ref_.orientation_W_B.coeffs() << std::endl;
 }
 
-void ImpedanceControlModule::setRef(const Eigen::Vector3d &_position,
-                                    const Eigen::Quaterniond &_orientation) {
-  ref_position_ = _position;
-  ref_quaternion_ = _orientation;
+void ImpedanceControlModule::setRef(
+    const Eigen::Vector3d &_ref_delta_position_W,
+    const Eigen::Quaterniond &_ref_ouzel_orientation_WB) {
+  ref_position_delta_W = _ref_delta_position_W;
+  ref_quaternion_ouzel_W = _ref_ouzel_orientation_WB;
 
-  ref_.position_W = ref_position_;
-  ref_.orientation_W_B = ref_quaternion_;
+  ref_.position_W = ref_position_delta_W;
+  ref_.orientation_W_B = ref_quaternion_ouzel_W;
   //      ref_.position_W = Eigen::Vector3d::Zero();
   //      ref_.orientation_W_B = Eigen::Quaterniond::Identity();
 }

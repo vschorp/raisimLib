@@ -88,14 +88,14 @@ public:
     resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 33;
+    obDim_ = 36;
     actionDim_ = 12;
     actionMean_.setZero(actionDim_);
     actionStd_.setZero(actionDim_);
-    position_W_.setZero();
-    orientation_W_B_.setIdentity();
-    bodyLinearVel_.setZero();
-    bodyAngularVel_.setZero();
+    ouzel_position_W_.setZero();
+    ouzel_orientation_W_B_.setIdentity();
+    ouzel_linear_vel_B_.setZero();
+    ouzel_angular_vel_B_.setZero();
 
     /// action scaling
     actionMean_ = gc_init_.tail(actionDim_);
@@ -158,27 +158,28 @@ public:
   float step(const Eigen::Ref<EigenVec> &action) final {
     // give adapted waypoint to controller -> get wrench
     //    std::cout << "action: " << action << std::endl;
-    //    controller_.setOdom(position_W_gt_, orientation_W_B_gt_,
-    //    bodyLinearVel_gt_, bodyAngularVel_gt_);
-    controller_.setOdom(position_W_, orientation_W_B_, bodyLinearVel_,
-                        bodyAngularVel_);
+    //    controller_.setOdom(ouzel_position_W_gt_, ouzel_orientation_W_B_gt_,
+    //    ouzel_linear_vel_B_gt_, ouzel_angular_vel_B_gt_);
+    controller_.setOdom(ouzel_position_W_, ouzel_orientation_W_B_,
+                        ouzel_linear_vel_B_, ouzel_angular_vel_B_);
 
-    //    std::cout << "ref pos: " << ref_position_ << std::endl;
-    //    std::cout << "ref orient coeffs: " << ref_orientation_.coeffs() <<
-    //    std::endl; double waypoint_distw, error_anglew;
-    //    computeErrorMetrics(waypoint_distw, error_anglew);
-    //    std::cout << "waypoint dist before action: " << waypoint_distw <<
-    //    std::endl; std::cout << "angle error deg before action: " <<
+    //    std::cout << "ref pos: " << ref_delta_position_ << std::endl;
+    //    std::cout << "ref orient coeffs: " << ref_ouzel_orientation_.coeffs()
+    //    << std::endl; double waypoint_dist_deltaw, error_anglew;
+    //    computeErrorMetrics(waypoint_dist_deltaw, error_anglew);
+    //    std::cout << "waypoint dist before action: " << waypoint_dist_deltaw
+    //    << std::endl; std::cout << "angle error deg before action: " <<
     //    error_anglew / M_PI * 180 << std::endl;
 
     auto actionD = action.cast<double>();
-    Eigen::Vector3d ref_position_corr_vec = actionD.segment(0, 3);
-    Eigen::Quaterniond ref_orientation_corr =
+    Eigen::Vector3d delta_ouzel_ref_position_offset = actionD.segment(0, 3);
+    Eigen::Quaterniond ref_ouzel_orientation_corr =
         QuaternionFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
-    //    std::cout << "action ref pos: " << ref_position_corr_vec << std::endl;
-    //    std::cout << "action ref orient coeffs: " <<
-    //    ref_orientation_corr.coeffs() << std::endl;
-    controller_.setRefFromAction(ref_position_corr_vec, ref_orientation_corr);
+    //    std::cout << "action ref pos: " << delta_ouzel_ref_position_offset <<
+    //    std::endl; std::cout << "action ref orient coeffs: " <<
+    //    ref_ouzel_orientation_corr.coeffs() << std::endl;
+    controller_.adaptRefFromAction(delta_ouzel_ref_position_offset,
+                                   ref_ouzel_orientation_corr);
 
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, control_dt_);
@@ -186,18 +187,18 @@ public:
     //    "commanded torque:\n" << wrench_command.torque << std::endl;
 
     // delta arm
-    Eigen::Vector3d desired_joint_pos(actionD.tail(3));
-    Eigen::Vector3d desired_clamped_joint_pos = desired_joint_pos;
-    //    std::cout << "desired_clamped_joint_pos: " <<
-    //    desired_clamped_joint_pos
+    Eigen::Vector3d ref_delta_joint_pos(actionD.tail(3));
+    Eigen::Vector3d ref_delta_joint_pos_clamped = ref_delta_joint_pos;
+    //    std::cout << "ref_delta_joint_pos_clamped: " <<
+    //    ref_delta_joint_pos_clamped
     //              << std::endl;
-    boost::algorithm::clamp(desired_clamped_joint_pos(0),
+    boost::algorithm::clamp(ref_delta_joint_pos_clamped(0),
                             delta_min_joint_angle_, delta_max_joint_angle_);
-    boost::algorithm::clamp(desired_clamped_joint_pos(1),
+    boost::algorithm::clamp(ref_delta_joint_pos_clamped(1),
                             delta_min_joint_angle_, delta_max_joint_angle_);
-    boost::algorithm::clamp(desired_clamped_joint_pos(2),
+    boost::algorithm::clamp(ref_delta_joint_pos_clamped(2),
                             delta_min_joint_angle_, delta_max_joint_angle_);
-    delta_sym_->sendActuatorsCommand(desired_clamped_joint_pos);
+    delta_sym_->sendActuatorsCommand(ref_delta_joint_pos_clamped);
 
     //    std::cout << "base link idx: " <<
     //    ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
@@ -205,21 +206,22 @@ public:
     orig.setZero();
     //    Eigen::Vector3d levitation_force_W(0, 0, ouzel_->getTotalMass()
     //    * 9.81); Eigen::Vector3d levitation_force_B =
-    //    orientation_W_B_gt_.inverse().toRotationMatrix() * levitation_force_W;
-    //    Eigen::Vector3d test_torque_W(0, 0, 0.1);
+    //    ouzel_orientation_W_B_gt_.inverse().toRotationMatrix() *
+    //    levitation_force_W; Eigen::Vector3d test_torque_W(0, 0, 0.1);
     //    Eigen::Vector3d test_torque_B =
-    //    orientation_W_B_gt_.inverse().toRotationMatrix() * test_torque_W;
+    //    ouzel_orientation_W_B_gt_.inverse().toRotationMatrix() *
+    //    test_torque_W;
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++) {
       // get current gt measurements
       Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
-      position_W_gt_ = odometry_measurement_gt.segment(0, 3);
-      orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3),
-                                               odometry_measurement_gt(4),
-                                               odometry_measurement_gt(5),
-                                               odometry_measurement_gt(6))
-                                .normalized();
-      bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
-      bodyAngularVel_gt_ = odometry_measurement_gt.segment(10, 3);
+      ouzel_position_W_gt_ = odometry_measurement_gt.segment(0, 3);
+      ouzel_orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3),
+                                                     odometry_measurement_gt(4),
+                                                     odometry_measurement_gt(5),
+                                                     odometry_measurement_gt(6))
+                                      .normalized();
+      ouzel_linear_vel_B_gt_ = odometry_measurement_gt.segment(7, 3);
+      ouzel_angular_vel_B_gt_ = odometry_measurement_gt.segment(10, 3);
 
       // apply wrench on ouzel
       ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME,
@@ -235,17 +237,17 @@ public:
       ee_vel_prev_ = ee_vel;
 
       Eigen::Vector3d B_dv_WB =
-          orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
-          bodyLinearVel_gt_;
+          ouzel_orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
+          ouzel_linear_vel_B_gt_;
       Eigen::Vector3d B_om_WB =
-          orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
-          bodyAngularVel_gt_;
+          ouzel_orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
+          ouzel_angular_vel_B_gt_;
       Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_) / control_dt_;
       B_om_WB_prev_ = B_om_WB;
 
       // Compute feed forward base wrench due to dynamics.
       Eigen::Vector3d force_B, torque_B;
-      delta_sym_->getBaseWrench(&force_B, &torque_B, orientation_W_B_gt_,
+      delta_sym_->getBaseWrench(&force_B, &torque_B, ouzel_orientation_W_B_gt_,
                                 B_om_WB, B_dom_WB, B_dv_WB, ee_pos, ee_vel,
                                 ee_acc);
 
@@ -253,10 +255,10 @@ public:
                                  ouzel_->getGeneralizedCoordinate()[1],
                                  ouzel_->getGeneralizedCoordinate()[2]);
       Eigen::Vector3d eef_pos_W = base_pos_W + pos_offset_BD_ +
-                                  orientation_W_B_gt_.toRotationMatrix() *
+                                  ouzel_orientation_W_B_gt_.toRotationMatrix() *
                                       ang_offset_BD_.matrix() * ee_pos;
       delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
-      delta_eef_->setOrientation(orientation_W_B_gt_);
+      delta_eef_->setOrientation(ouzel_orientation_W_B_gt_);
 
       ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME, force_B,
                                ouzel_->BODY_FRAME, orig);
@@ -285,26 +287,28 @@ public:
     // get observations
     updateObservation();
 
-    double waypoint_dist, error_angle;
-    computeErrorMetrics(waypoint_dist, error_angle);
-    Eigen::AngleAxisd ref_orientation_corr_angle_axis(ref_orientation_corr);
-    //    std::cout << "waypoint dist: " << waypoint_dist << std::endl;
+    double waypoint_dist_delta, error_angle;
+    computeErrorMetrics(waypoint_dist_delta, error_angle);
+    Eigen::AngleAxisd ref_ouzel_orientation_corr_angle_axis(
+        ref_ouzel_orientation_corr);
+    //    std::cout << "waypoint dist: " << waypoint_dist_delta << std::endl;
     //    std::cout << "angle error deg: " << error_angle / M_PI * 180 <<
     //    std::endl; std::cout << "angle error: " << error_angle << std::endl;
     //    std::cout << "ref orient corr angle: " <<
-    //    float(ref_orientation_corr_angle_axis.angle()) << std::endl;
-    rewards_.record("waypointDist", float(waypoint_dist));
+    //    float(ref_ouzel_orientation_corr_angle_axis.angle()) << std::endl;
+    rewards_.record("waypointDist", float(waypoint_dist_delta));
     rewards_.record("orientError", float(error_angle));
     rewards_.record("linearRefCorr",
-                    float(ref_position_corr_vec.squaredNorm()));
+                    float(delta_ouzel_ref_position_offset.squaredNorm()));
     rewards_.record("orientRefCorr",
-                    float(ref_orientation_corr_angle_axis.angle()));
-    rewards_.record("deltaJointAngles", float(std::abs(desired_joint_pos(0)) +
-                                              std::abs(desired_joint_pos(1)) +
-                                              std::abs(desired_joint_pos(2))));
+                    float(ref_ouzel_orientation_corr_angle_axis.angle()));
+    rewards_.record("deltaJointAngles",
+                    float(std::abs(ref_delta_joint_pos(0)) +
+                          std::abs(ref_delta_joint_pos(1)) +
+                          std::abs(ref_delta_joint_pos(2))));
     rewards_.record(
         "deltaJointAnglesClamp",
-        float((desired_joint_pos - desired_clamped_joint_pos).norm()));
+        float((ref_delta_joint_pos - ref_delta_joint_pos_clamped).norm()));
     //    rewards_.record("angularVel",
     //    anymal_->getGeneralizedForce().squaredNorm());
     //    rewards_.record("force",
@@ -318,45 +322,46 @@ public:
   void updateObservation() {
     odometry_.update();
     Eigen::VectorXd odometry_measurement = odometry_.getMeas();
-    position_W_ = odometry_measurement.segment(0, 3);
-    orientation_W_B_ =
+    ouzel_position_W_ = odometry_measurement.segment(0, 3);
+    ouzel_orientation_W_B_ =
         Eigen::Quaterniond(odometry_measurement(3), odometry_measurement(4),
                            odometry_measurement(5), odometry_measurement(6))
             .normalized();
-    bodyLinearVel_ = odometry_measurement.segment(7, 3);
-    bodyAngularVel_ = odometry_measurement.segment(10, 3);
+    ouzel_linear_vel_B_ = odometry_measurement.segment(7, 3);
+    ouzel_angular_vel_B_ = odometry_measurement.segment(10, 3);
 
     Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
-    position_W_gt_ = odometry_measurement_gt.segment(0, 3);
-    orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3),
-                                             odometry_measurement_gt(4),
-                                             odometry_measurement_gt(5),
-                                             odometry_measurement_gt(6))
-                              .normalized();
-    bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
-    bodyAngularVel_gt_ = odometry_measurement_gt.segment(10, 3);
+    ouzel_position_W_gt_ = odometry_measurement_gt.segment(0, 3);
+    ouzel_orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3),
+                                                   odometry_measurement_gt(4),
+                                                   odometry_measurement_gt(5),
+                                                   odometry_measurement_gt(6))
+                                    .normalized();
+    ouzel_linear_vel_B_gt_ = odometry_measurement_gt.segment(7, 3);
+    ouzel_angular_vel_B_gt_ = odometry_measurement_gt.segment(10, 3);
 
     delta_joint_angle_ = delta_sym_->getqPos();
     delta_joint_angular_vel_ = delta_sym_->getqVel();
 
     Eigen::Vector3d end_effector_position_D;
     delta_sym_->fwkinPosition(&end_effector_position_D);
-    end_effector_pos_W_ = position_W_ + pos_offset_BD_ +
-                          orientation_W_B_.toRotationMatrix() *
-                              ang_offset_BD_.matrix() * end_effector_position_D;
-    end_effector_pos_W_gt_ = position_W_gt_ + pos_offset_BD_ +
-                             orientation_W_B_gt_.toRotationMatrix() *
-                                 ang_offset_BD_.matrix() *
-                                 end_effector_position_D;
+    delta_position_W_ = ouzel_position_W_ + pos_offset_BD_ +
+                        ouzel_orientation_W_B_.toRotationMatrix() *
+                            ang_offset_BD_.matrix() * end_effector_position_D;
+    delta_position_W_gt_ = ouzel_position_W_gt_ + pos_offset_BD_ +
+                           ouzel_orientation_W_B_gt_.toRotationMatrix() *
+                               ang_offset_BD_.matrix() *
+                               end_effector_position_D;
 
     ouzel_->getState(gc_, gv_);
 
     //    std::cout << "odometry_measurement: " << odometry_measurement <<
-    //    std::endl; std::cout << "position W: " << position_W_ << std::endl;
-    //    std::cout << "orientation_W_B_ coeffs: " << orientation_W_B_.coeffs()
-    //    << std::endl; std::cout << "bodyLinearVel_: " << bodyLinearVel_ <<
-    //    std::endl; std::cout << "bodyAngularVel_: " << bodyAngularVel_ <<
-    //    std::endl;
+    //    std::endl; std::cout << "position W: " << ouzel_position_W_ <<
+    //    std::endl; std::cout << "ouzel_orientation_W_B_ coeffs: " <<
+    //    ouzel_orientation_W_B_.coeffs()
+    //    << std::endl; std::cout << "ouzel_linear_vel_B_: " <<
+    //    ouzel_linear_vel_B_ << std::endl; std::cout << "ouzel_angular_vel_B_:
+    //    " << ouzel_angular_vel_B_ << std::endl;
 
     //    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
     //    std::cout << "odometry_measurement gt: " << odometry_measurement_gt <<
@@ -378,37 +383,43 @@ public:
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     /// convert it to float
-    Eigen::Vector3d position_RC_W =
-        position_W_ - ref_position_; // RC for ref to current
-    Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
-    Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix();
+    Eigen::Vector3d ref_delta_position_offset_W =
+        delta_position_W_ - ref_delta_position_; // ref to current
+    Eigen::Vector3d delta_ouzel_position_offet_W =
+        ouzel_position_W_ - delta_position_W_; // delta to ouzel
+    Eigen::Matrix3d ouzel_orientation_W_B_mat =
+        ouzel_orientation_W_B_.toRotationMatrix();
+    Eigen::Matrix3d ref_ouzel_orientation_mat =
+        ref_ouzel_orientation_.toRotationMatrix();
     Eigen::VectorXd ob_double(obDim_);
-    ob_double << position_RC_W, orientation_W_B_mat.col(0),
-        orientation_W_B_mat.col(1), orientation_W_B_mat.col(2), bodyLinearVel_,
-        bodyAngularVel_, ref_orientation_mat.col(0), ref_orientation_mat.col(1),
-        ref_orientation_mat.col(2), delta_joint_angle_,
-        delta_joint_angular_vel_;
+    ob_double << ref_delta_position_offset_W, delta_ouzel_position_offet_W,
+        ouzel_orientation_W_B_mat.col(0), ouzel_orientation_W_B_mat.col(1),
+        ouzel_orientation_W_B_mat.col(2), ouzel_linear_vel_B_,
+        ouzel_angular_vel_B_, ref_ouzel_orientation_mat.col(0),
+        ref_ouzel_orientation_mat.col(1), ref_ouzel_orientation_mat.col(2),
+        delta_joint_angle_, delta_joint_angular_vel_;
     ob = ob_double.cast<float>();
-    //    std::cout << "orientation_W_B_ coeffs: \n" <<
-    //    orientation_W_B_.coeffs() << std::endl; std::cout <<
-    //    "orientation_W_B_mat: \n" << orientation_W_B_mat << std::endl;
-    //    std::cout << "orientation_W_B_mat: " << orientation_W_B_mat <<
-    //    std::endl; std::cout << "ob: " << ob << std::endl;
+    //    std::cout << "ouzel_orientation_W_B_ coeffs: \n" <<
+    //    ouzel_orientation_W_B_.coeffs() << std::endl; std::cout <<
+    //    "ouzel_orientation_W_B_mat: \n" << ouzel_orientation_W_B_mat <<
+    //    std::endl; std::cout << "ouzel_orientation_W_B_mat: " <<
+    //    ouzel_orientation_W_B_mat << std::endl; std::cout << "ob: " << ob <<
+    //    std::endl;
   }
 
   bool isTerminalState(float &terminalReward) final {
-    double waypoint_dist, error_angle;
-    computeErrorMetrics(waypoint_dist, error_angle);
+    double waypoint_dist_delta, error_angle;
+    computeErrorMetrics(waypoint_dist_delta, error_angle);
     Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
     Eigen::Vector3d lin_vel_gt = odometry_measurement_gt.segment(7, 3);
     Eigen::Vector3d ang_vel_gt = odometry_measurement_gt.segment(10, 3);
 
-    if (waypoint_dist > terminalOOBWaypointDist_ ||
+    if (waypoint_dist_delta > terminalOOBWaypointDist_ ||
         error_angle > terminalOOBAngleError_) {
       terminalReward = terminalOOBRewardCoeff_;
       //      std::cout << "termination oob" << std::endl;
       return true;
-    } else if (waypoint_dist < terminalSuccessWaypointDist_ &&
+    } else if (waypoint_dist_delta < terminalSuccessWaypointDist_ &&
                error_angle < terminalSuccessAngleError_ &&
                lin_vel_gt.norm() < terminalSuccessLinearVel_ &&
                ang_vel_gt.norm() < terminalSuccessAngularVel_) {
@@ -430,7 +441,7 @@ private:
     Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_),
                                   unifDistPlusMinusOne_(gen_),
                                   unifDistPlusMinusOne_(gen_));
-    position_W_ = init_position;
+    ouzel_position_W_ = init_position;
 
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_),
                                      unifDistPlusMinusOne_(gen_),
@@ -441,7 +452,7 @@ private:
         Eigen::AngleAxisd(init_angle, init_orientation));
     init_quaternion.normalize();
     //    init_quaternion = Eigen::Quaterniond::Identity();
-    orientation_W_B_ = init_quaternion;
+    ouzel_orientation_W_B_ = init_quaternion;
 
     Eigen::Vector3d init_lin_vel_dir(unifDistPlusMinusOne_(gen_),
                                      unifDistPlusMinusOne_(gen_),
@@ -449,9 +460,9 @@ private:
     Eigen::Vector3d init_lin_vel = init_lin_vel_dir.normalized() *
                                    initialLinearVel_ *
                                    unifDistPlusMinusOne_(gen_);
-    bodyLinearVel_ = init_lin_vel;
+    ouzel_linear_vel_B_ = init_lin_vel;
     Eigen::Vector3d init_lin_vel_W =
-        orientation_W_B_.toRotationMatrix() * init_lin_vel;
+        ouzel_orientation_W_B_.toRotationMatrix() * init_lin_vel;
     //    std::cout << "init_lin_vel_W: " << init_lin_vel_W << std::endl;
 
     Eigen::Vector3d init_ang_vel_axis(unifDistPlusMinusOne_(gen_),
@@ -460,14 +471,16 @@ private:
     Eigen::Vector3d init_ang_vel = init_ang_vel_axis.normalized() *
                                    initialAngularVel_ *
                                    unifDistPlusMinusOne_(gen_);
-    bodyAngularVel_ = init_ang_vel;
+    ouzel_angular_vel_B_ = init_ang_vel;
     Eigen::Vector3d init_ang_vel_W =
-        orientation_W_B_.toRotationMatrix() * init_ang_vel;
+        ouzel_orientation_W_B_.toRotationMatrix() * init_ang_vel;
     //    std::cout << "init_ang_vel_W: " << init_ang_vel_W << std::endl;
 
-    gc_init_ << position_W_.x(), position_W_.y(), position_W_.z(), // position
-        orientation_W_B_.w(), orientation_W_B_.x(), orientation_W_B_.y(),
-        orientation_W_B_.z(), // orientation quaternion
+    gc_init_ << ouzel_position_W_.x(), ouzel_position_W_.y(),
+        ouzel_position_W_.z(), // position
+        ouzel_orientation_W_B_.w(), ouzel_orientation_W_B_.x(),
+        ouzel_orientation_W_B_.y(),
+        ouzel_orientation_W_B_.z(), // orientation quaternion
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     gv_init_ << init_lin_vel_W.x(), init_lin_vel_W.y(), init_lin_vel_W.z(),
@@ -486,9 +499,9 @@ private:
                                        unifDistPlusMinusOne_(gen_),
                                        unifDistPlusMinusOne_(gen_));
     ref_delta_position.normalize();
-    ref_position_ = position_W_ + initialDistanceOffset_ *
-                                      unifDistPlusMinusOne_(gen_) *
-                                      ref_delta_position;
+    ref_delta_position_ = ouzel_position_W_ + initialDistanceOffset_ *
+                                                  unifDistPlusMinusOne_(gen_) *
+                                                  ref_delta_position;
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_),
                                           unifDistPlusMinusOne_(gen_),
@@ -497,39 +510,43 @@ private:
     double ref_delta_angle =
         unifDistPlusMinusOne_(gen_) * initialAngularOffset_;
     //    std::cout << "ref delta angle " << ref_delta_angle << std::endl;
-    //    std::cout << "ref delta pos\n" << ref_position_ -
+    //    std::cout << "ref delta pos\n" << ref_delta_position_ -
     //    gc_init_.segment(0,3) << std::endl;
     Eigen::Quaterniond ref_delta_quaternion(
         Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
     ref_delta_quaternion.normalize();
-    Eigen::Quaterniond ref_quaternion = orientation_W_B_ * ref_delta_quaternion;
+    Eigen::Quaterniond ref_quaternion =
+        ouzel_orientation_W_B_ * ref_delta_quaternion;
     ref_quaternion.normalize();
-    ref_orientation_ = ref_quaternion;
+    ref_ouzel_orientation_ = ref_quaternion;
 
-    controller_.setRef(ref_position_, ref_orientation_);
+    controller_.setRef(ref_delta_position_, ref_ouzel_orientation_);
     //    std::cout << "ref_delta_angle deg: " << ref_delta_angle / M_PI * 180.0
-    //    << std::endl; std::cout << "orientation_W_B_ coeffs: " <<
-    //    orientation_W_B_.coeffs() << std::endl; std::cout << "init
-    //    orientation_W_B_ coeffs: " << orientation_W_B_.coeffs() << std::endl;
-    //    std::cout << "ref_delta_quaternion coeffs: " <<
+    //    << std::endl; std::cout << "ouzel_orientation_W_B_ coeffs: " <<
+    //    ouzel_orientation_W_B_.coeffs() << std::endl; std::cout << "init
+    //    ouzel_orientation_W_B_ coeffs: " << ouzel_orientation_W_B_.coeffs() <<
+    //    std::endl; std::cout << "ref_delta_quaternion coeffs: " <<
     //    ref_delta_quaternion.coeffs() << std::endl; std::cout <<
     //    "ref_quaternion coeffs: " << ref_quaternion.coeffs() << std::endl;
     //    double error_angle =
-    //    ref_orientation_.angularDistance(orientation_W_B_); std::cout <<
-    //    "initial error angle: " << error_angle<< std::endl;
+    //    ref_ouzel_orientation_.angularDistance(ouzel_orientation_W_B_);
+    //    std::cout << "initial error angle: " << error_angle<< std::endl;
   }
 
   void computeErrorMetrics(double &waypointDist, double &errorAngle) {
     // Maybe want to clamp the error terms?
     //    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
-    //    Eigen::Vector3d position_W_gt = odometry_measurement_gt.segment(0, 3);
-    waypointDist = (end_effector_pos_W_gt_ - ref_position_).squaredNorm();
+    //    Eigen::Vector3d ouzel_position_W_gt =
+    //    odometry_measurement_gt.segment(0, 3);
+    waypointDist = (delta_position_W_gt_ - ref_delta_position_).squaredNorm();
 
     //    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
-    //    Eigen::Quaterniond orientation_W_B_gt(odometry_measurement_gt(3),
+    //    Eigen::Quaterniond
+    //    ouzel_orientation_W_B_gt(odometry_measurement_gt(3),
     //    odometry_measurement_gt(4), odometry_measurement_gt(5),
     //    odometry_measurement_gt(6));
-    errorAngle = orientation_W_B_gt_.angularDistance(ref_orientation_);
+    errorAngle =
+        ouzel_orientation_W_B_gt_.angularDistance(ref_ouzel_orientation_);
   }
 
   Eigen::Quaterniond
@@ -568,14 +585,15 @@ private:
   double terminalSuccessAngularVel_;
   Eigen::VectorXd actionMean_, actionStd_;
   //  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
-  Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_,
+  Eigen::Vector3d ouzel_position_W_, ouzel_linear_vel_B_, ouzel_angular_vel_B_,
       delta_joint_angle_, delta_joint_angular_vel_;
-  Eigen::Quaterniond orientation_W_B_;
-  Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
-  Eigen::Quaterniond orientation_W_B_gt_;
+  Eigen::Quaterniond ouzel_orientation_W_B_;
+  Eigen::Vector3d ouzel_position_W_gt_, ouzel_linear_vel_B_gt_,
+      ouzel_angular_vel_B_gt_;
+  Eigen::Quaterniond ouzel_orientation_W_B_gt_;
   std::set<size_t> footIndices_;
-  Eigen::Vector3d ref_position_;
-  Eigen::Quaterniond ref_orientation_;
+  Eigen::Vector3d ref_delta_position_;
+  Eigen::Quaterniond ref_ouzel_orientation_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 
@@ -589,8 +607,8 @@ private:
   Eigen::Quaterniond ang_offset_BD_;
   double delta_min_joint_angle_ = 0.0;
   double delta_max_joint_angle_ = 1.4; // rad
-  Eigen::Vector3d end_effector_pos_W_;
-  Eigen::Vector3d end_effector_pos_W_gt_;
+  Eigen::Vector3d delta_position_W_;
+  Eigen::Vector3d delta_position_W_gt_;
 
   int baseLink_;
 
