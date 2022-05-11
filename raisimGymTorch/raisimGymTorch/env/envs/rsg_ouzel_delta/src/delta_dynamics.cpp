@@ -404,7 +404,7 @@ bool DeltaController::fwkinPosition(Eigen::Vector3d *ee_pos,
   // 2003
   //
   // Implementation from https://github.com/vvhitedog/three_sphere_intersection/
-
+  //  std::cout << "delta controller q: " << q << std::endl;
   double R_s = params_->r_B() - params_->r_T();
   // Sphere centers defined by knees plus offset;
   std::vector<Eigen::Vector3d> spheres(3);
