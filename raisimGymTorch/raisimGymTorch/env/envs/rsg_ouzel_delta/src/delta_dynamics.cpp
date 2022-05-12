@@ -381,7 +381,7 @@ DeltaController::getParamQuat(const std::string &param_name) {
   double x = cfg_[param_name]["x"].template As<float>();
   double y = cfg_[param_name]["y"].template As<float>();
   double z = cfg_[param_name]["z"].template As<float>();
-  return Eigen::Quaterniond(w, x, y, z);
+  return Eigen::Quaterniond(w, x, y, z).normalized();
 }
 
 void DeltaController::getTargetPos(Eigen::Vector3d *delta_pos_ref) {

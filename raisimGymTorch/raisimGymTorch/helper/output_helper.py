@@ -33,6 +33,8 @@ class EvaluationVisualizer:
         self.vars = np.ones(ob_dim)
         self.stds = np.ones(ob_dim)
         self.epsilon = 1e-8
+        self.stds = np.ones(ob_dim)
+
 
     def load_normalization_params(self, path, it_number):
         mean_fname = "mean" + it_number + ".csv"

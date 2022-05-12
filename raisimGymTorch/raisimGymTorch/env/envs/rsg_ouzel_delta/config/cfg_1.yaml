@@ -72,7 +72,7 @@ environment:
     force_i_gain: 0.4
     use_force_control: 0
     vehicle_params: # from ouzel minimal
-      mass: 4.28503
+      mass: 4.58503
       inertia:
         xx: 0.0688659
         xy: 0.0

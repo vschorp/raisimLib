@@ -51,9 +51,9 @@ public:
     gcDim_ = ouzel_->getGeneralizedCoordinateDim();
     gvDim_ = ouzel_->getDOF();
     nJoints_ = gvDim_ - 6;
-    std::cout << "gcDim_: " << gcDim_ << std::endl;
-    std::cout << "gvDim_: " << gvDim_ << std::endl;
-    std::cout << "nJoints_: " << nJoints_ << std::endl;
+    //    std::cout << "gcDim_: " << gcDim_ << std::endl;
+    //    std::cout << "gvDim_: " << gvDim_ << std::endl;
+    //    std::cout << "nJoints_: " << nJoints_ << std::endl;
 
     /// initialize containers
     gc_.setZero(gcDim_);
@@ -78,12 +78,15 @@ public:
         Eigen::Vector3d(cfg["deltaArm"]["p_BO"]["x"].template As<float>(),
                         cfg["deltaArm"]["p_BO"]["y"].template As<float>(),
                         cfg["deltaArm"]["p_BO"]["z"].template As<float>());
+    //    std::cout << "pos_offset_BD_: " << pos_offset_BD_ << std::endl;
     ang_offset_BD_ =
         Eigen::Quaterniond(cfg["deltaArm"]["q_BO"]["w"].template As<float>(),
                            cfg["deltaArm"]["q_BO"]["x"].template As<float>(),
                            cfg["deltaArm"]["q_BO"]["y"].template As<float>(),
-                           cfg["deltaArm"]["q_BO"]["z"].template As<float>());
-
+                           cfg["deltaArm"]["q_BO"]["z"].template As<float>())
+            .normalized();
+    //    std::cout << "ang_offset_BD_.matrix(): " << ang_offset_BD_.matrix()
+    //              << std::endl;
     /// Initialisation Parameters
     initialDistanceOffset_ =
         cfg["initialisation"]["distanceOffset"].template As<float>();
@@ -266,11 +269,15 @@ public:
                                ouzel_->BODY_FRAME, orig);
       ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
 
+      //      std::cout << "delta force B: " << force_B << std::endl;
+      //      std::cout << "delta torque B: " << torque_B << std::endl;
+
       if (render_) {
-        Eigen::Vector3d eef_pos_W =
-            ouzel_position_W_gt_ + pos_offset_BD_ +
-            ouzel_orientation_W_B_gt_.toRotationMatrix() *
-                ang_offset_BD_.matrix() * ee_pos;
+        Eigen::Vector3d eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
+                                    ouzel_orientation_W_B_gt_.matrix() *
+                                        ang_offset_BD_.matrix() * ee_pos;
+        //        std::cout << "relative delta_position_W_gt_: "
+        //                  << eef_pos_W - ouzel_position_W_gt_ << std::endl;
         delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
         //      std::cout << "eef_pos_W: " << eef_pos_W << std::endl;
         delta_eef_->setOrientation(ouzel_orientation_W_B_gt_);
@@ -343,18 +350,18 @@ public:
     //    std::cout << "delta pos in B frame: " << end_effector_position_D
     //              << std::endl;
     delta_position_W_ = ouzel_position_W_ + pos_offset_BD_ +
-                        ouzel_orientation_W_B_.toRotationMatrix() *
+                        ouzel_orientation_W_B_.matrix() *
                             ang_offset_BD_.matrix() * end_effector_position_D;
     delta_position_W_gt_ = ouzel_position_W_gt_ + pos_offset_BD_ +
-                           ouzel_orientation_W_B_gt_.toRotationMatrix() *
+                           ouzel_orientation_W_B_gt_.matrix() *
                                ang_offset_BD_.matrix() *
                                end_effector_position_D;
-
     ouzel_->getState(gc_, gv_);
 
-    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
-    //    std::cout << "ouzel position W: " << ouzel_position_W_ << std::endl;
-    //    std::cout << "delta position W: " << delta_position_W_ << std::endl;
+    //    std::cout << "odometry_measurement: " << odometry_measurement <<
+    //    std::endl; std::cout << "ouzel position W: " << ouzel_position_W_ <<
+    //    std::endl; std::cout << "delta position W: " << delta_position_W_ <<
+    //    std::endl;
     //        std::cout << "ouzel_orientation_W_B_ coeffs: " <<
     //    ouzel_orientation_W_B_.coeffs()
     //    << std::endl; std::cout << "ouzel_linear_vel_B_: " <<
@@ -450,6 +457,8 @@ private:
     double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
     Eigen::Quaterniond init_quaternion(
         Eigen::AngleAxisd(init_angle, init_orientation));
+    //    Eigen::Quaterniond init_quaternion(
+    //        Eigen::AngleAxisd(M_PI / 2.0, Eigen::Vector3d(1, 0, 0)));
     init_quaternion.normalize();
     //    init_quaternion = Eigen::Quaterniond::Identity();
     ouzel_orientation_W_B_ = init_quaternion;
@@ -481,11 +490,11 @@ private:
         ouzel_orientation_W_B_.w(), ouzel_orientation_W_B_.x(),
         ouzel_orientation_W_B_.y(),
         ouzel_orientation_W_B_.z(), // orientation quaternion
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     gv_init_ << init_lin_vel_W.x(), init_lin_vel_W.y(), init_lin_vel_W.z(),
         init_ang_vel_W.x(), init_ang_vel_W.y(), init_ang_vel_W.z(), 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     // reset delta arm
     Eigen::Vector3d init_joint_angles(
@@ -517,6 +526,7 @@ private:
     ref_delta_quaternion.normalize();
     Eigen::Quaterniond ref_quaternion =
         ouzel_orientation_W_B_ * ref_delta_quaternion;
+    //    Eigen::Quaterniond ref_quaternion = ouzel_orientation_W_B_;
     ref_quaternion.normalize();
     ref_ouzel_orientation_ = ref_quaternion;
 
@@ -607,7 +617,7 @@ private:
   Eigen::Vector3d pos_offset_BD_;
   Eigen::Quaterniond ang_offset_BD_;
   double delta_min_joint_angle_ = 0.0;
-  double delta_max_joint_angle_ = 1.4; // rad
+  double delta_max_joint_angle_ = 1.5; // rad
   Eigen::Vector3d delta_position_W_;
   Eigen::Vector3d delta_position_W_gt_;
 

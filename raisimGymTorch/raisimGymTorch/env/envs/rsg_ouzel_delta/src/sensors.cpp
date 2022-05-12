@@ -178,7 +178,7 @@ void odometry::update() {
   measureGT_ << point_W.e(), orient_W.e(), velocity_B.e(),
       angularVelocity_B.e();
 
-  std::cout << "pos w sensor: " << point_W.e() << std::endl;
+  //  std::cout << "pos w sensor: " << point_W.e() << std::endl;
   //    std::cout << "orient mat sensor: " << orientMatWB << std::endl;
   //    std::cout << "orient quat sensor raisim: " << orient_W << std::endl;
   //    std::cout << "orient quat sensor eigen: " << orient_W.e() << std::endl;
@@ -200,7 +200,7 @@ void odometry::update() {
     measure_ << point_W_noisy, orient_W_quat_noisy.w(), orient_W_quat_noisy.x(),
         orient_W_quat_noisy.y(), orient_W_quat_noisy.z(), velocity_B_noisy,
         angularVelocity_B_noisy;
-    std::cout << "point_W_noisy: " << point_W_noisy << std::endl;
+    //    std::cout << "point_W_noisy: " << point_W_noisy << std::endl;
     //      std::cout << "orient noise quat sensor coeffs: " <<
     //      orient_noise_quat.coeffs() << std::endl; std::cout << "orient W quat
     //      noisy sensor coeffs: " << orient_W_quat_noisy.coeffs() << std::endl;
