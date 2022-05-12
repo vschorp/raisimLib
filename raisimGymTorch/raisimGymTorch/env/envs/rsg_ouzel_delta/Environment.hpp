@@ -60,8 +60,7 @@ public:
     gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_);
     gv_init_.setZero(gvDim_);
-    //    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_);
-    //    pTarget12_.setZero(nJoints_);
+
     control_dt_ = cfg["control_dt"].template As<float>();
     simulation_dt_ = cfg["simulation_dt"].template As<float>();
 
@@ -75,9 +74,15 @@ public:
       delta_eef_->setBodyType(raisim::BodyType::STATIC);
     }
     ee_vel_prev_ = Eigen::Vector3d::Zero();
-    pos_offset_BD_ = Eigen::Vector3d(0.00363497, -0.00548676, -0.07537646);
+    pos_offset_BD_ =
+        Eigen::Vector3d(cfg["deltaArm"]["p_BO"]["x"].template As<float>(),
+                        cfg["deltaArm"]["p_BO"]["y"].template As<float>(),
+                        cfg["deltaArm"]["p_BO"]["z"].template As<float>());
     ang_offset_BD_ =
-        Eigen::Quaterniond(0.00726273, 0.9999278, 0.00176325, 0.00940957);
+        Eigen::Quaterniond(cfg["deltaArm"]["q_BO"]["w"].template As<float>(),
+                           cfg["deltaArm"]["q_BO"]["x"].template As<float>(),
+                           cfg["deltaArm"]["q_BO"]["y"].template As<float>(),
+                           cfg["deltaArm"]["q_BO"]["z"].template As<float>());
 
     /// Initialisation Parameters
     initialDistanceOffset_ =
