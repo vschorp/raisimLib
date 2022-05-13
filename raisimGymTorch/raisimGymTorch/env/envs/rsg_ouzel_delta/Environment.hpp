@@ -74,6 +74,7 @@ public:
       delta_eef_->setBodyType(raisim::BodyType::STATIC);
     }
     ee_vel_prev_ = Eigen::Vector3d::Zero();
+    B_om_WB_prev_ = Eigen::Vector3d::Zero();
     pos_offset_BD_ =
         Eigen::Vector3d(cfg["deltaArm"]["p_BO"]["x"].template As<float>(),
                         cfg["deltaArm"]["p_BO"]["y"].template As<float>(),
@@ -228,29 +229,35 @@ public:
     //    Eigen::Vector3d test_torque_B =
     //    ouzel_orientation_W_B_gt_.inverse().toRotationMatrix() *
     //    test_torque_W;
+    //    Eigen::Vector3d force_B_old(0, 0, 0);
+    //    Eigen::Vector3d torque_B_old(0, 0, 0);
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++) {
       // get current gt measurements
       odometry_.update();
       Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
-//      ouzel_->getState(gc_, gv_);
-//      if (!Eigen::isfinite(gc_.array()).all()) {
-//        std::cout << "gc is nan" << std::endl;
-//        std::cout << "odom gt is nan: " << previous_odometry_measurement_gt_
-//                  << std::endl;
-//        std::cout << "commanded thrust:\n"
-//                  << wrench_command.thrust << "\n"
-//                  << "commanded torque:\n"
-//                  << wrench_command.torque << std::endl;
-//        std::cout << "action ref pos: " << delta_ouzel_ref_position_offset
-//                  << " action ref pos norm: "
-//                  << delta_ouzel_ref_position_offset.norm() << std::endl;
-//        std::cout << "action ref orient coeffs: "
-//                  << ref_ouzel_orientation_corr.coeffs()
-//                  << " action ref orient angle: "
-//                  << Eigen::AngleAxisd(ref_ouzel_orientation_corr).angle()
-//                  << std::endl;
-//      }
-//      previous_odometry_measurement_gt_ = odometry_measurement_gt;
+      //      ouzel_->getState(gc_, gv_);
+      //      if (!Eigen::isfinite(gc_.array()).all()) {
+      //        std::cout << "gc is nan" << std::endl;
+      //        std::cout << "odom gt is nan: " <<
+      //        previous_odometry_measurement_gt_
+      //                  << std::endl;
+      //        std::cout << "commanded thrust:\n"
+      //                  << wrench_command.thrust << "\n"
+      //                  << "commanded torque:\n"
+      //                  << wrench_command.torque << std::endl;
+      //        std::cout << "action ref pos: " <<
+      //        delta_ouzel_ref_position_offset
+      //                  << " action ref pos norm: "
+      //                  << delta_ouzel_ref_position_offset.norm() <<
+      //                  std::endl;
+      //        std::cout << "action ref orient coeffs: "
+      //                  << ref_ouzel_orientation_corr.coeffs()
+      //                  << " action ref orient angle: "
+      //                  <<
+      //                  Eigen::AngleAxisd(ref_ouzel_orientation_corr).angle()
+      //                  << std::endl;
+      //      }
+      //      previous_odometry_measurement_gt_ = odometry_measurement_gt;
       ouzel_position_W_gt_ = odometry_measurement_gt.segment(0, 3);
       ouzel_orientation_W_B_gt_ = Eigen::Quaterniond(odometry_measurement_gt(3),
                                                      odometry_measurement_gt(4),
@@ -277,11 +284,9 @@ public:
       ee_vel_prev_ = ee_vel;
 
       Eigen::Vector3d B_dv_WB =
-          ouzel_orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
-          ouzel_linear_vel_B_gt_;
-      Eigen::Vector3d B_om_WB =
-          ouzel_orientation_W_B_gt_.inverse().normalized().toRotationMatrix() *
-          ouzel_angular_vel_B_gt_;
+          ouzel_orientation_W_B_gt_.toRotationMatrix() * ouzel_linear_vel_B_gt_;
+      Eigen::Vector3d B_om_WB = ouzel_orientation_W_B_gt_.toRotationMatrix() *
+                                ouzel_angular_vel_B_gt_;
       Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_) / simulation_dt_;
       B_om_WB_prev_ = B_om_WB;
 
@@ -291,11 +296,15 @@ public:
                                 B_om_WB, B_dom_WB, B_dv_WB, ee_pos, ee_vel,
                                 ee_acc);
       ouzel_->setExternalForce(baseLink_, ouzel_->BODY_FRAME, force_B,
-                               ouzel_->BODY_FRAME, orig);
+                               ouzel_->WORLD_FRAME, ouzel_->getCOM());
       ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
 
-      //      std::cout << "delta force B: " << force_B << std::endl;
-      //      std::cout << "delta torque B: " << torque_B << std::endl;
+      //      if (!Eigen::isfinite(odometry_measurement_gt.array()).all()) {
+      //        std::cout << "delta force B: " << force_B_old << std::endl;
+      //        std::cout << "delta torque B: " << torque_B_old << std::endl;
+      //      }
+      //      force_B_old = force_B;
+      //      torque_B_old = torque_B;
 
       if (render_) {
         Eigen::Vector3d eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
@@ -497,6 +506,7 @@ private:
     Eigen::Vector3d init_lin_vel = init_lin_vel_dir.normalized() *
                                    initialLinearVel_ *
                                    unifDistPlusMinusOne_(gen_);
+    //    init_lin_vel = Eigen::Vector3d(1.0, 0, 0);
     ouzel_linear_vel_B_ = init_lin_vel;
     Eigen::Vector3d init_lin_vel_W =
         ouzel_orientation_W_B_.toRotationMatrix() * init_lin_vel;
@@ -651,7 +661,7 @@ private:
 
   int baseLink_;
 
-  Eigen::VectorXd previous_odometry_measurement_gt_;
+  //  Eigen::VectorXd previous_odometry_measurement_gt_;
 
   //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
