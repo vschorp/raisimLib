@@ -37,11 +37,10 @@ void ImpedanceControlModule::calculateWrenchCommand(
   computeStateError(&position_error_B, &velocity_error_B, &attitude_error_B,
                     &rate_error_B);
 
-  //      std::cout << "position error B: " << position_error_B.norm() <<
-  //      std::endl; std::cout << "attitude error B: " <<
-  //      attitude_error_B.norm() << std::endl; std::cout << "lin vel error B: "
-  //      << velocity_error_B.norm() << std::endl; std::cout << "rate error
-  //      error B: " << rate_error_B.norm() << std::endl;
+  //  std::cout << "position error B: " << position_error_B.norm() << std::endl;
+  //  std::cout << "attitude error B: " << attitude_error_B.norm() << std::endl;
+  //  std::cout << "lin vel error B: " << velocity_error_B.norm() << std::endl;
+  //  std::cout << "rate error B: " << rate_error_B.norm() << std::endl;
 
   // unused tool_error variables
   //      Eigen::Vector3d tool_position_error_B, tool_velocity_error_B;
@@ -488,14 +487,14 @@ void ImpedanceControlModule::setOdom(const Eigen::Vector3d &_position,
                                      const Eigen::Vector3d &_velocity_body,
                                      const Eigen::Vector3d &_angular_velocity) {
   odom_.position_W = _position;
-  odom_.orientation_W_B = _orientation;
+  odom_.orientation_W_B = _orientation.normalized();
   odom_.velocity_B = _velocity_body;
   odom_.angular_velocity_B = _angular_velocity;
 }
 
 void ImpedanceControlModule::adaptRefFromAction(
     const Eigen::Vector3d &_delta_ouzel_ref_position_offset_W,
-    const Eigen::Quaterniond &_ouzel_orientation_corr_mat) {
+    const Eigen::Quaterniond &_ouzel_orientation_corr_quat) {
   ref_.position_W = ref_position_delta_W;
   ref_.position_W += _delta_ouzel_ref_position_offset_W;
   if (!Eigen::isfinite(ref_.position_W.array()).any()) {
@@ -503,7 +502,8 @@ void ImpedanceControlModule::adaptRefFromAction(
   }
 
   ref_.orientation_W_B = ref_quaternion_ouzel_W;
-  ref_.orientation_W_B = ref_.orientation_W_B * _ouzel_orientation_corr_mat;
+  ref_.orientation_W_B = ref_.orientation_W_B * _ouzel_orientation_corr_quat;
+  ref_.orientation_W_B.normalize();
   //      ref_.orientation_W_B = _orientation_corr;
   if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
     std::cout << "ref orientation is nan!!" << std::endl;

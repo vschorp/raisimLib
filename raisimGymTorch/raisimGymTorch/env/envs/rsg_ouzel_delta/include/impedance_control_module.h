@@ -148,7 +148,7 @@ public:
 
   void
   adaptRefFromAction(const Eigen::Vector3d &_delta_ouzel_ref_position_offset_W,
-                     const Eigen::Quaterniond &_ouzel_orientation_corr_mat);
+                     const Eigen::Quaterniond &_ouzel_orientation_corr_quat);
   void setRef(const Eigen::Vector3d &_ref_delta_position_W,
               const Eigen::Quaterniond &_ref_ouzel_orientation_WB);
 

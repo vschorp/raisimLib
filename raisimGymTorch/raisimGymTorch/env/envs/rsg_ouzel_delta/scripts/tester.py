@@ -82,7 +82,7 @@ else:
         # print(obs)
         action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         # action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]])
-        action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+        # action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
         reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
         reward_ll_sum = reward_ll_sum + reward_ll[0]
         eval_visualizer.parse_obs(obs, step)
