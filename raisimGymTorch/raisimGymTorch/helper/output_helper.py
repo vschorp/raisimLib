@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 import torch
 import os
 
+
 class EvaluationVisualizer:
     def __init__(self, max_steps, ob_dim, save_path, is_delta=False):
         self.is_delta = is_delta
@@ -113,14 +114,17 @@ class EvaluationVisualizer:
 
     def visualize(self):
         plt.figure(figsize=[20, 10])
-        plt.plot(self.zero_line[:, 0], "k-", label="zero line" )
+        plt.plot(self.zero_line[:, 0], "k-", label="zero line")
         if self.is_delta:
             plt.plot(self.ref_delta_position_offset_W_all[:, 0], 'r-', label='ref_delta_position_offset_W_x')
             plt.plot(self.ref_delta_position_offset_W_all[:, 1], 'g-', label='ref_delta_position_offset_W_y')
             plt.plot(self.ref_delta_position_offset_W_all[:, 2], 'b-', label='ref_delta_position_offset_W_z')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r--', label='ref_ouzel_position_offset_W_x')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g--', label='ref_ouzel_position_offset_W_y')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b--', label='ref_ouzel_position_offset_W_z')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r--',
+                     label='ref_ouzel_position_offset_W_x')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g--',
+                     label='ref_ouzel_position_offset_W_y')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b--',
+                     label='ref_ouzel_position_offset_W_z')
             plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_delta_ouzel_offset_x')
             plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_delta_ouzel_offset_y')
             plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_delta_ouzel_offset_z')
@@ -182,7 +186,6 @@ class EvaluationVisualizer:
         plt.legend()
         plt.savefig(self.save_path + "orient.png")
 
-
         plt.figure(figsize=[20, 10])
         plt.plot(self.body_linear_vel_all[:, 0], 'r-', label='body_linear_vel_all_x')
         plt.plot(self.body_linear_vel_all[:, 1], 'g-', label='body_linear_vel_all_y')
@@ -202,7 +205,8 @@ class EvaluationVisualizer:
         plt.figure(figsize=[20, 10])
         # plt.plot(np.linalg.norm(self.pos_RC_W_all - self.ref_pos_W_all, axis=1), 'r-', label='pos_W_error')
         if self.is_delta:
-            plt.plot(np.linalg.norm(self.delta_ouzel_position_offet_W_all - self.action_lin_corr_all, axis=1), 'r-', label='ouzel_pos_W_error')
+            plt.plot(np.linalg.norm(self.delta_ouzel_position_offet_W_all - self.action_lin_corr_all, axis=1), 'r-',
+                     label='ouzel_pos_W_error')
             plt.plot(np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1), 'g-', label='delta_pos_W_error')
         else:
             plt.plot(np.linalg.norm(self.pos_RC_W_all, axis=1), 'r-', label='pos_W_error')
