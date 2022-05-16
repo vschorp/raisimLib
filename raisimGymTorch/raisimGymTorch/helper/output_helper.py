@@ -203,22 +203,12 @@ class EvaluationVisualizer:
         plt.savefig(self.save_path + "angular_vel.png")
 
         plt.figure(figsize=[20, 10])
-        # plt.plot(np.linalg.norm(self.pos_RC_W_all - self.ref_pos_W_all, axis=1), 'r-', label='pos_W_error')
         if self.is_delta:
             plt.plot(np.linalg.norm(self.delta_ouzel_position_offet_W_all - self.action_lin_corr_all, axis=1), 'r-',
                      label='ouzel_pos_W_error')
             plt.plot(np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1), 'g-', label='delta_pos_W_error')
         else:
             plt.plot(np.linalg.norm(self.pos_RC_W_all, axis=1), 'r-', label='pos_W_error')
-
-        # orient_W_all = Rotation.from_quat(self.orient_quat_W_all)
-        # ref_orient_W_all = Rotation.from_quat(self.ref_orient_quat_W_all)
-        # diff_orient_W_all = orient_W_all * ref_orient_W_all.inv()
-        # diff_angles_W_all = 2.0 * np.arctan2(np.linalg.norm(diff_orient_W_all.as_quat(), axis=1),  diff_orient_W_all.as_quat()[:, 3])
-        # diff_angles_W_all = diff_orient_W_all.magnitude()
-        # diff_angles_W_all_scaled = np.where(np.abs(diff_angles_W_all) < np.abs(diff_angles_W_all - np.pi), diff_angles_W_all, diff_angles_W_all - np.pi)
         plt.plot(self.error_angle, 'b-', label='angle_error_rad')
-        # plt.plot(diff_angles_W_all_scaled / np.pi * 180.0, 'b-', label='angle_error_deg')
-
         plt.legend()
         plt.savefig(self.save_path + "error_metrics.png")
