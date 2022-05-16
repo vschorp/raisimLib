@@ -8,7 +8,7 @@ use_adaptive_lr: False
 
 environment:
   render: False
-  num_envs: 150 #26
+  num_envs: 100 #26
   eval_every_n: 1000 #200
   num_threads: 60 #30
   simulation_dt: 0.0025
@@ -164,5 +164,5 @@ environment:
       z: 0.00940957
 
 architecture:
-  policy_net: [ 64, 64 ]
-  value_net: [ 64, 64 ]
+  policy_net: [ 128, 128 ]
+  value_net: [ 128, 128 ]

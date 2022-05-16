@@ -8,7 +8,7 @@ use_adaptive_lr: False
 
 environment:
   render: False
-  num_envs: 120 #26
+  num_envs: 100 #26
   eval_every_n: 1000 #200
   num_threads: 60 #30
   simulation_dt: 0.0025
@@ -101,10 +101,10 @@ environment:
     linkName: ouzel/base_link
     childFrameId: ouzel
   odometryNoise:
-    pos_std: 1.0e-4
-    orient_std: 1.0e-4
-    lin_vel_std: 5.0e-3
-    ang_vel_std: 5.0e-3
+    pos_std: 5.0e-4
+    orient_std: 5.0e-4
+    lin_vel_std: 1.0e-2
+    ang_vel_std: 1.0e-2
   deltaArm: #from delta_control/resources/delta_control_params_real.yaml
     r_B: 0.084
     r_T: 0.038
