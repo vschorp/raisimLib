@@ -23,6 +23,7 @@ class EvaluationVisualizer:
 
         self.means = np.zeros(ob_dim)
         self.vars = np.ones(ob_dim)
+        self.stds = np.ones(ob_dim)
         self.epsilon = 1e-8
 
     def load_normalization_params(self, path, it_number):
@@ -34,9 +35,10 @@ class EvaluationVisualizer:
         self.means = np.loadtxt(mean_fpath)
         self.vars = np.loadtxt(var_fpath)
         self.vars += np.ones(self.ob_dim) * self.epsilon
+        self.stds = np.sqrt(self.vars)
 
     def parse_obs(self, obs: np.ndarray, step):
-        obs_orig = np.multiply(obs, self.vars) + self.means
+        obs_orig = np.multiply(obs, self.stds) + self.means
 
         body_pos_W = obs_orig[0][0:3]
         body_orient_mat_W = np.vstack([obs_orig[0][3:6], obs_orig[0][6:9], obs_orig[0][9:12]]).transpose()
