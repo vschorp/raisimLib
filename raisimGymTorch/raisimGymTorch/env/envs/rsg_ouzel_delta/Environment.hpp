@@ -229,10 +229,29 @@ public:
     //    test_torque_W;
     //    Eigen::Vector3d force_B_old(0, 0, 0);
     //    Eigen::Vector3d torque_B_old(0, 0, 0);
+    Eigen::VectorXd odometry_measurement_gt;
+    Eigen::Vector3d force_B, torque_B;
+    Eigen::Vector3d ee_pos, ee_vel, ee_acc, eef_pos_W;
+    Eigen::Vector3d B_dv_WB, B_om_WB, B_dom_WB;
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++) {
       // get current gt measurements
+      //      ouzel_->getState(gc_, gv_);
+      //      if (!Eigen::isfinite(gc_.array()).all()) {
+      //        std::cout << "gc is nan in for loop of step!! " << i <<
+      //        std::endl; std::cout << "odometry : " << odometry_measurement_gt
+      //        << std::endl; std::cout << "gc : " << gc_ << std::endl;
+      //        std::cout << "gv : " << gv_ << std::endl;
+      //        std::cout << "wrench_command.thrust: " << wrench_command.thrust
+      //                  << std::endl;
+      //        std::cout << "wrench_command.torque: " << wrench_command.torque
+      //                  << std::endl;
+      //        std::cout << "force_B: " << force_B << std::endl;
+      //        std::cout << "torque_B: " << torque_B << std::endl;
+      //        //        std::cout << "gv : " << gv_ << std::endl;
+      //        raise(SIGTERM);
+      //      }
       odometry_.update();
-      Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
+      odometry_measurement_gt = odometry_.getMeasGT();
       //      ouzel_->getState(gc_, gv_);
       //      if (!Eigen::isfinite(gc_.array()).all()) {
       //        std::cout << "gc is nan" << std::endl;
@@ -274,22 +293,21 @@ public:
       // delta arm simulation
       delta_sym_->sendActuatorsCommand(ref_delta_joint_pos_clamped);
 
-      Eigen::Vector3d ee_pos, ee_vel, ee_acc;
       delta_sym_->fwkinPosition(&ee_pos);
       //      std::cout << "delta_pos_ in delta frame: " << ee_pos << std::endl;
       delta_sym_->fwkinVel(&ee_vel, ee_pos);
       ee_acc = (ee_vel - ee_vel_prev_) / simulation_dt_;
       ee_vel_prev_ = ee_vel;
 
-      Eigen::Vector3d B_dv_WB =
+      B_dv_WB =
           ouzel_orientation_W_B_gt_.toRotationMatrix() * ouzel_linear_vel_B_gt_;
-      Eigen::Vector3d B_om_WB = ouzel_orientation_W_B_gt_.toRotationMatrix() *
-                                ouzel_angular_vel_B_gt_;
-      Eigen::Vector3d B_dom_WB = (B_om_WB - B_om_WB_prev_) / simulation_dt_;
+      B_om_WB = ouzel_orientation_W_B_gt_.toRotationMatrix() *
+                ouzel_angular_vel_B_gt_;
+      B_dom_WB = (B_om_WB - B_om_WB_prev_) / simulation_dt_;
       B_om_WB_prev_ = B_om_WB;
 
       // Compute feed forward base wrench due to dynamics.
-      Eigen::Vector3d force_B, torque_B;
+      //      Eigen::Vector3d force_B, torque_B;
       delta_sym_->getBaseWrench(&force_B, &torque_B, ouzel_orientation_W_B_gt_,
                                 B_om_WB, B_dom_WB, B_dv_WB, ee_pos, ee_vel,
                                 ee_acc);
@@ -305,9 +323,9 @@ public:
       //      torque_B_old = torque_B;
 
       if (render_) {
-        Eigen::Vector3d eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
-                                    ouzel_orientation_W_B_gt_.matrix() *
-                                        ang_offset_BD_.matrix() * ee_pos;
+        eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
+                    ouzel_orientation_W_B_gt_.matrix() *
+                        ang_offset_BD_.matrix() * ee_pos;
         //        std::cout << "relative delta_position_W_gt_: "
         //                  << eef_pos_W - ouzel_position_W_gt_ << std::endl;
         delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
@@ -323,6 +341,15 @@ public:
     }
 
     // get observations
+    //    ouzel_->getState(gc_, gv_);
+    //    if (!Eigen::isfinite(gc_.array()).all()) {
+    //      std::cout << "gc is nan in end of step!!" << std::endl;
+    //      //      std::cout << "odometry : " << odometry_measurement <<
+    //      std::endl;
+    //      //      std::cout << "gc : " << gc_ << std::endl;
+    //      //      std::cout << "gv : " << gv_ << std::endl;
+    //      raise(SIGTERM);
+    //    }
     updateObservation();
 
     // get rewards

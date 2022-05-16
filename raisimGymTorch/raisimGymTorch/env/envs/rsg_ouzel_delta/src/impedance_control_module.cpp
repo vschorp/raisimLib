@@ -21,6 +21,7 @@ ImpedanceControlModule::ImpedanceControlModule(const Yaml::Node &cfg) {
   setControllerParameters(cfg);
   T_T_B_ = Eigen::Affine3d::Identity();
   initWrenchFilter_ = false;
+  resetIntegrators();
 }
 
 void ImpedanceControlModule::calculateWrenchCommand(
@@ -66,6 +67,11 @@ void ImpedanceControlModule::calculateWrenchCommand(
       impedance_ctrl_ang_B;
   computePIDerror(&linear_error_B, &angular_error_B, position_error_limited_B,
                   velocity_error_B, attitude_error_B, rate_error_B);
+  //  if (!Eigen::isfinite(linear_error_B.array()).all() ||
+  //      !Eigen::isfinite(angular_error_B.array()).all()) {
+  //    std::cout << "not finite betwwen compute pid and add feedfwd acc"
+  //              << std::endl;
+  //  }
   addFeedFwdAccel(&linear_error_B, &angular_error_B);
 
   // compute external wrench
@@ -148,6 +154,25 @@ void ImpedanceControlModule::calculateWrenchCommand(
 
   (*wrench_command).thrust = mass_ * commandFilter_->getForce();
   (*wrench_command).torque = inertia_ * commandFilter_->getTorque();
+  //  if (!Eigen::isfinite((*wrench_command).thrust.array()).all() ||
+  //      !Eigen::isfinite((*wrench_command).torque.array()).all()) {
+  //    std::cout << "wrench_command.thrust: " << (*wrench_command).thrust
+  //              << std::endl;
+  //    std::cout << "wrench_command.torque: " << (*wrench_command).torque
+  //              << std::endl;
+  //    std::cout << "linear_accel_B_des: " << linear_accel_B_des << std::endl;
+  //    std::cout << "angular_accel_B_des: " << angular_accel_B_des <<
+  //    std::endl; std::cout << "impedance_ctrl_lin_B: " << impedance_ctrl_lin_B
+  //    << std::endl; std::cout << "impedance_ctrl_ang_B: " <<
+  //    impedance_ctrl_ang_B << std::endl; std::cout << "linear_error_B: " <<
+  //    linear_error_B << std::endl; std::cout << "angular_error_B: " <<
+  //    angular_error_B << std::endl; std::cout << "position_error_B: " <<
+  //    position_error_B << std::endl; std::cout << "velocity_error_B: " <<
+  //    velocity_error_B << std::endl; std::cout << "attitude_error_B: " <<
+  //    attitude_error_B << std::endl; std::cout << "rate_error_B: " <<
+  //    rate_error_B << std::endl; std::cout << "n_coriolis: " << n_coriolis <<
+  //    std::endl;
+  //  }
 }
 
 void ImpedanceControlModule::computeForceControlCommand(
