@@ -214,13 +214,12 @@ public:
         ref_delta_joint_pos(1), delta_min_joint_angle_, delta_max_joint_angle_);
     ref_delta_joint_pos_clamped(2) = boost::algorithm::clamp(
         ref_delta_joint_pos(2), delta_min_joint_angle_, delta_max_joint_angle_);
-    std::cout << "ref_delta_joint_pos: " << ref_delta_joint_pos << std::endl;
-    std::cout << "ref_delta_joint_pos_clamped: " << ref_delta_joint_pos_clamped
-              << std::endl;
+    //    std::cout << "ref_delta_joint_pos: " << ref_delta_joint_pos <<
+    //    std::endl; std::cout << "ref_delta_joint_pos_clamped: " <<
+    //    ref_delta_joint_pos_clamped
+    //              << std::endl;
     //    std::cout << "base link idx: " <<
     //    ouzel_->getBodyIdx("ouzel/base_link") << std::endl;
-    Vec<3> orig;
-    orig.setZero();
     //    Eigen::Vector3d levitation_force_W(0, 0, ouzel_->getTotalMass()
     //    * 9.81); Eigen::Vector3d levitation_force_B =
     //    ouzel_orientation_W_B_gt_.inverse().toRotationMatrix() *
