@@ -21,6 +21,7 @@ ImpedanceControlModule::ImpedanceControlModule(const Yaml::Node &cfg) {
   setControllerParameters(cfg);
   T_T_B_ = Eigen::Affine3d::Identity();
   initWrenchFilter_ = false;
+  resetIntegrators();
 }
 
 void ImpedanceControlModule::calculateWrenchCommand(
