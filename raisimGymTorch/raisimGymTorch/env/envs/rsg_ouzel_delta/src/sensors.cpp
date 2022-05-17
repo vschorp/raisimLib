@@ -93,28 +93,30 @@ odometryNoise::odometryNoise(double sampleTime, const Yaml::Node &cfg)
 }
 
 Eigen::VectorXd odometryNoise::getNoise() {
-  Eigen::Vector3d pos_noise(standardNormalDistribution_(randomGenerator_),
-                            standardNormalDistribution_(randomGenerator_),
-                            standardNormalDistribution_(randomGenerator_));
-  pos_noise *= pos_std_;
+  Eigen::Vector3d pos_noise(unifDistPlusMinusOne_(randomGenerator_),
+                            unifDistPlusMinusOne_(randomGenerator_),
+                            unifDistPlusMinusOne_(randomGenerator_));
+  pos_noise = pos_noise.normalized() *
+              standardNormalDistribution_(randomGenerator_) * pos_std_;
 
-  Eigen::Vector3d lin_vel_noise(standardNormalDistribution_(randomGenerator_),
-                                standardNormalDistribution_(randomGenerator_),
-                                standardNormalDistribution_(randomGenerator_));
-  lin_vel_noise *= lin_vel_std_;
+  Eigen::Vector3d lin_vel_noise(unifDistPlusMinusOne_(randomGenerator_),
+                                unifDistPlusMinusOne_(randomGenerator_),
+                                unifDistPlusMinusOne_(randomGenerator_));
+  lin_vel_noise = lin_vel_noise.normalized() *
+                  standardNormalDistribution_(randomGenerator_) * lin_vel_std_;
 
-  Eigen::Vector3d ang_vel_noise(standardNormalDistribution_(randomGenerator_),
-                                standardNormalDistribution_(randomGenerator_),
-                                standardNormalDistribution_(randomGenerator_));
-  ang_vel_noise *= ang_vel_std_;
+  Eigen::Vector3d ang_vel_noise(unifDistPlusMinusOne_(randomGenerator_),
+                                unifDistPlusMinusOne_(randomGenerator_),
+                                unifDistPlusMinusOne_(randomGenerator_));
+  ang_vel_noise = ang_vel_noise.normalized() *
+                  standardNormalDistribution_(randomGenerator_) * ang_vel_std_;
 
-  Eigen::Vector3d orient_noise_rot_vec(
-      standardNormalDistribution_(randomGenerator_),
-      standardNormalDistribution_(randomGenerator_),
-      standardNormalDistribution_(randomGenerator_));
+  Eigen::Vector3d orient_noise_rot_vec(unifDistPlusMinusOne_(randomGenerator_),
+                                       unifDistPlusMinusOne_(randomGenerator_),
+                                       unifDistPlusMinusOne_(randomGenerator_));
   Eigen::AngleAxisd orient_noise(standardNormalDistribution_(randomGenerator_) *
                                      orient_std_,
-                                 orient_noise_rot_vec);
+                                 orient_noise_rot_vec.normalized());
   Eigen::Quaterniond orient_noise_quat(orient_noise);
   orient_noise_quat.normalize();
 
