@@ -24,31 +24,38 @@ class ENVIRONMENT : public RaisimGymEnv {
       RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable), unifDistPlusMinusOne_(-1.0, 1.0), controller_(cfg["controller"]) {
     /// create world
     world_ = std::make_unique<raisim::World>();
-    /// add objects
-//    parseURDF();
-//    std::ofstream myfile;
-//    myfile.open (ros::package::getPath("ros_raisim_interface") + "/resource/temp.urdf", std::ios::out);
-//    myfile << *urdf_;
-//    myfile.close();
+    
+    /// add objects 
     ouzel_ = world_->addArticulatedSystem(resourceDir_ + "/ouzel/temp.urdf");
+    shelf_ = world_->addArticulatedSystem(resourceDir_ + "/objectInteraction/model.urdf");
 
-//    std::string baseLink = ouzel_->getBodyIdx("ouzel/base_link");
-//    ouzel_ = world_->addArticulatedSystem(resourceDir_+"/ouzel/urdf/model.urdf"); //used to be anymal.urdf
+    shelf_->setName("shelf");
     ouzel_->setName("ouzel");
+
     ouzel_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     world_->addGround(-10.0); // we don't need a ground for the drone
 
     /// get robot data
-    gcDim_ = ouzel_->getGeneralizedCoordinateDim();
-    gvDim_ = ouzel_->getDOF();
-    nJoints_ = gvDim_ - 6;
-//    std::cout << "gcDim_: " << gcDim_ << std::endl;
-//    std::cout << "gvDim_: " << gvDim_ << std::endl;
-//    std::cout << "nJoints_: " << nJoints_ << std::endl;
+    gcDim_ = ouzel_->getGeneralizedCoordinateDim(); // -> 25
+    gvDim_ = ouzel_->getDOF(); // -> 24
+    nJoints_ = gvDim_ - 6; // -> 18
+    // std::cout << "gcDim_: " << gcDim_ << std::endl;
+    // std::cout << "gvDim_: " << gvDim_ << std::endl;
+    // std::cout << "nJoints_: " << nJoints_ << std::endl;
+
+    /// get object data
+    gcDim_shelf_ = shelf_->getGeneralizedCoordinateDim(); // ->1
+    gvDim_shelf_ = shelf_->getDOF(); // ->1
+    nJoints_shelf_ = 1;
+
 
     /// initialize containers
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_); gv_init_.setZero(gvDim_);
+    
+    gc_shelf_.setZero(gcDim_shelf_); gc_init_shelf_.setZero(gcDim_shelf_);
+    gv_shelf_.setZero(gvDim_shelf_); gv_init_shelf_.setZero(gvDim_shelf_); 
+
 //    pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_); pTarget12_.setZero(nJoints_);
     control_dt_ = cfg["control_dt"].template As<float>();
     simulation_dt_ = cfg["simulation_dt"].template As<float>();
@@ -62,7 +69,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 27;
+    obDim_ = 27; // ^^ to change after observe()
     actionDim_ =  9;
     actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
     position_W_.setZero();
@@ -88,6 +95,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     // Add sensors
     auto* odometry_noise = new raisim_sensors::odometryNoise(control_dt_, cfg["odometryNoise"]);
     odometry_ = raisim_sensors::odometry(ouzel_, control_dt_, "ouzel", "ouzel/base_link", odometry_noise);
+    // odometry(raisim::ArticulatedSystem *robot, double sampleTime, const std::string child_frame_name, const std::string sensor_link_name , noise<Eigen::VectorXd> * noise_source = NULL)
+    odometry_shelf_ = raisim_sensors::odometry(shelf_, control_dt_, "shelf", "measured_joint_link", odometry_noise);
+    
+    
+    // to add: odometry_handle_link 
+
+    
 
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
@@ -229,6 +243,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     return rewards_.sum();
   }
 
+  
   void updateObservation() {
     odometry_.update();
     Eigen::VectorXd odometry_measurement = odometry_.getMeas();
@@ -245,7 +260,24 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     ouzel_->getState(gc_, gv_);
 
-//    std::cout << "odometry_measurement: " << odometry_measurement << std::endl;
+    odometry_shelf_.update();
+    Eigen::VectorXd odometry_measurement_shelf = odometry_shelf_.getMeas();
+    position_W_shelf_ = odometry_measurement_shelf.segment(0, 3);
+    orientation_W_B_shelf_ = Eigen::Quaterniond(odometry_measurement_shelf(3), odometry_measurement_shelf(4), odometry_measurement_shelf(5), odometry_measurement_shelf(6)).normalized();
+    bodyLinearVel_shelf_ = odometry_measurement_shelf.segment(7, 3);
+    bodyAngularVel_shelf_ = odometry_measurement_shelf.segment(10, 3);
+    
+    // std::cout << "position_W_shelf_: " << position_W_shelf_ << std::endl;
+
+    Eigen::VectorXd odometry_measurement_shelf_gt = odometry_.getMeasGT();
+    position_W_shelf_gt_ = odometry_measurement_shelf_gt.segment(0, 3);
+    orientation_W_B_shelf_gt_ = Eigen::Quaterniond(odometry_measurement_shelf_gt(3), odometry_measurement_shelf_gt(4), odometry_measurement_shelf_gt(5), odometry_measurement_shelf_gt(6)).normalized();
+    bodyLinearVel_shelf_gt_ = odometry_measurement_shelf_gt.segment(7, 3);
+    bodyAngularVel_shelf_gt_ = odometry_measurement_shelf_gt.segment(10, 3);
+
+    shelf_->getState(gc_shelf_, gv_shelf_);
+
+//    std::cout << "odometry_measurement: " << odometry_measurement.size() << std::endl;
 //    std::cout << "position W: " << position_W_ << std::endl;
 //    std::cout << "orientation_W_B_ coeffs: " << orientation_W_B_.coeffs() << std::endl;
 //    std::cout << "bodyLinearVel_: " << bodyLinearVel_ << std::endl;
@@ -265,18 +297,14 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     /// convert it to float
-    Eigen::Vector3d position_RC_W = position_W_ - ref_position_; // RC for ref to current
-    Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix();
-    Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix();
+    Eigen::Vector3d position_RC_W = position_W_ - ref_position_; // RC for ref to current (size=3)
+    Eigen::Matrix3d orientation_W_B_mat = orientation_W_B_.toRotationMatrix(); // (size=9)
+    Eigen::Matrix3d ref_orientation_mat = ref_orientation_.toRotationMatrix(); // (size=9)
     Eigen::VectorXd ob_double(obDim_);
     ob_double << position_RC_W, orientation_W_B_mat.col(0), orientation_W_B_mat.col(1), orientation_W_B_mat.col(2),
                  bodyLinearVel_, bodyAngularVel_,
                  ref_orientation_mat.col(0), ref_orientation_mat.col(1), ref_orientation_mat.col(2);
-    ob = ob_double.cast<float>();
-//    std::cout << "orientation_W_B_ coeffs: \n" << orientation_W_B_.coeffs() << std::endl;
-//    std::cout << "orientation_W_B_mat: \n" << orientation_W_B_mat << std::endl;
-//    std::cout << "orientation_W_B_mat: " << orientation_W_B_mat << std::endl;
-//    std::cout << "ob: " << ob << std::endl;
+    ob = ob_double.cast<float>(); // size=27
   }
 
   bool isTerminalState(float& terminalReward) final {
@@ -311,16 +339,26 @@ class ENVIRONMENT : public RaisimGymEnv {
 
  private:
   void resetInitialConditions() {
-    Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
-    position_W_ = init_position;
+    // we could set the init position at the door ^^ 
+    if(onlyInteraction){ // change initial condition to offset s.t. hook grasp the hinge !!
+      Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+      position_W_ = init_position;
+    } else{
+      Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+      position_W_ = init_position;  
+    }
 
-    Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
-    init_orientation.normalize();
-    double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
-    Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
-    init_quaternion.normalize();
-//    init_quaternion = Eigen::Quaterniond::Identity();
-    orientation_W_B_ = init_quaternion;
+    if(onlyInteraction){
+      Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
+      init_orientation.normalize();
+      double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
+      Eigen::Quaterniond init_quaternion(Eigen::AngleAxisd(init_angle, init_orientation));
+      init_quaternion.normalize();
+      // init_quaternion = Eigen::Quaterniond::Identity();
+      orientation_W_B_ = init_quaternion;
+    }
+
+    
 
     Eigen::Vector3d init_lin_vel_dir(unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_), unifDistPlusMinusOne_(gen_));
     Eigen::Vector3d init_lin_vel = init_lin_vel_dir.normalized() * initialLinearVel_ * unifDistPlusMinusOne_(gen_);
@@ -392,10 +430,13 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
 
-  int gcDim_, gvDim_, nJoints_;
+  int gcDim_, gvDim_, nJoints_, gcDim_shelf_, gvDim_shelf_, nJoints_shelf_;
   bool visualizable_ = false;
+  bool onlyInteraction = true;
   raisim::ArticulatedSystem* ouzel_;
+  raisim::ArticulatedSystem* shelf_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, pTarget_, pTarget12_, vTarget_;
+  Eigen::VectorXd gc_init_shelf_, gv_init_shelf_, gc_shelf_, gv_shelf_, pTarget_shelf_, pTarget12_shelf_, vTarget_shelf_;
   double initialDistanceOffset_;
   double initialAngularOffset_;
   double initialLinearVel_;
@@ -411,16 +452,19 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::VectorXd actionMean_, actionStd_;
 //  Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_;
-  Eigen::Quaterniond orientation_W_B_;
+  Eigen::Vector3d position_W_shelf_, bodyLinearVel_shelf_, bodyAngularVel_shelf_;
+  Eigen::VectorXd odometry_measurement, odometry_measurement_shelf;
+  Eigen::Quaterniond orientation_W_B_, orientation_W_B_shelf_;
   Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
-  Eigen::Quaterniond orientation_W_B_gt_;
+  Eigen::Vector3d position_W_shelf_gt_, bodyLinearVel_shelf_gt_, bodyAngularVel_shelf_gt_;
+  Eigen::Quaterniond orientation_W_B_gt_, orientation_W_B_shelf_gt_;
   std::set<size_t> footIndices_;
   Eigen::Vector3d ref_position_;
   Eigen::Quaterniond ref_orientation_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 
-  raisim_sensors::odometry odometry_;
+  raisim_sensors::odometry odometry_, odometry_shelf_;
 
   //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
