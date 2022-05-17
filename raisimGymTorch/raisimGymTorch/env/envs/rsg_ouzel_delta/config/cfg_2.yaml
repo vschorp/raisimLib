@@ -36,8 +36,8 @@ environment:
       reward: 1000.0
       waypointDist: 0.05
       angleErrorDeg: 5.0
-      linearVel: 0.01
-      angularVelDeg: 0.1
+      linearVel: 0.02
+      angularVelDeg: 2.0
   initialisation:
     distanceOffset: 1.5
     angleOffsetDeg: 45.0
