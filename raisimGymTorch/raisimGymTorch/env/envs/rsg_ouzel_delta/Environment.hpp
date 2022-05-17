@@ -494,6 +494,9 @@ public:
                ang_vel_gt.norm() < terminalSuccessAngularVel_) {
       terminalReward = terminalSuccessRewardCoeff_;
       //      std::cout << "termination success" << std::endl;
+      //      std::cout << "waypoint_dist_delta: " << waypoint_dist_delta <<
+      //      std::endl; std::cout << "error_angle: " << error_angle <<
+      //      std::endl;
       return true;
     } else {
       terminalReward = 0.f;
@@ -611,8 +614,7 @@ private:
     //    Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
     //    Eigen::Vector3d ouzel_position_W_gt =
     //    odometry_measurement_gt.segment(0, 3);
-    waypointDist = (delta_position_W_gt_ - ref_delta_position_).squaredNorm();
-
+    waypointDist = (delta_position_W_gt_ - ref_delta_position_).norm();
     //    Eigen::Quaterniond current_quat(gc_[3], gc_[4], gc_[5], gc_[6]);
     //    Eigen::Quaterniond
     //    ouzel_orientation_W_B_gt(odometry_measurement_gt(3),
