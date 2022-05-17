@@ -113,17 +113,22 @@ class EvaluationVisualizer:
             self.action_delta_angles_all[step, :] = delta_angles
 
     def visualize(self):
-        plt.figure(figsize=[20, 10])
-        plt.plot(self.zero_line[:, 0], "k-", label="zero line")
         if self.is_delta:
+            plt.figure(figsize=[20, 10])
+            plt.plot(self.zero_line[:, 0], "k-", label="zero line")
             plt.plot(self.ref_delta_position_offset_W_all[:, 0], 'r-', label='ref_delta_position_offset_W_x')
             plt.plot(self.ref_delta_position_offset_W_all[:, 1], 'g-', label='ref_delta_position_offset_W_y')
             plt.plot(self.ref_delta_position_offset_W_all[:, 2], 'b-', label='ref_delta_position_offset_W_z')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r--',
+            plt.legend()
+            plt.savefig(self.save_path + "pos_delta.png")
+
+        plt.figure(figsize=[20, 10])
+        if self.is_delta:
+            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r-',
                      label='ref_ouzel_position_offset_W_x')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g--',
+            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g-',
                      label='ref_ouzel_position_offset_W_y')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b--',
+            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b-',
                      label='ref_ouzel_position_offset_W_z')
             plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_delta_ouzel_offset_x')
             plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_delta_ouzel_offset_y')
@@ -137,21 +142,26 @@ class EvaluationVisualizer:
             plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
             plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
         plt.legend()
-        plt.savefig(self.save_path + "pos.png")
+        plt.savefig(self.save_path + "pos_omav.png")
 
         if self.is_delta:
             plt.figure(figsize=[20, 10])
             plt.plot(self.delta_joint_angle_all[:, 0], 'r-', label='delta_angle_1')
             plt.plot(self.delta_joint_angle_all[:, 1], 'g-', label='delta_angle_2')
             plt.plot(self.delta_joint_angle_all[:, 2], 'b-', label='delta_angle_3')
-            plt.plot(self.delta_joint_angular_vel_all[:, 0], 'r--', label='delta_angular_vel_1')
-            plt.plot(self.delta_joint_angular_vel_all[:, 1], 'g--', label='delta_angular_vel_2')
-            plt.plot(self.delta_joint_angular_vel_all[:, 2], 'b--', label='delta_angular_vel_3')
             plt.plot(self.action_delta_angles_all[:, 0], 'r*', label='ref_delta_angle_1')
             plt.plot(self.action_delta_angles_all[:, 1], 'g*', label='ref_delta_angle_2')
             plt.plot(self.action_delta_angles_all[:, 2], 'b*', label='ref_delta_angle_3')
             plt.legend()
             plt.savefig(self.save_path + "delta_angles.png")
+
+            plt.figure(figsize=[20, 10])
+            plt.plot(self.zero_line[:, 0], "k-", label="zero line")
+            plt.plot(self.delta_joint_angular_vel_all[:, 0], 'r-', label='delta_angular_vel_1')
+            plt.plot(self.delta_joint_angular_vel_all[:, 1], 'g-', label='delta_angular_vel_2')
+            plt.plot(self.delta_joint_angular_vel_all[:, 2], 'b-', label='delta_angular_vel_3')
+            plt.legend()
+            plt.savefig(self.save_path + "delta_angular_vel.png")
 
         orient_W_all_rot = Rotation.from_quat(self.orient_quat_W_all)
         body_orient_euler_W_all = orient_W_all_rot.as_euler("xyz")
@@ -193,6 +203,7 @@ class EvaluationVisualizer:
         plt.plot(np.linalg.norm(self.body_linear_vel_all, axis=1), 'm--', label='body_linear_vel_all_norm')
         plt.legend()
         plt.savefig(self.save_path + "linear_vel.png")
+        # print(f"finale linear vel {np.linalg.norm(self.body_linear_vel_all, axis=1)[-1]}")
 
         plt.figure(figsize=[20, 10])
         plt.plot(self.body_angular_vel_all[:, 0], 'r-', label='body_angular_vel_all_x')
@@ -201,12 +212,15 @@ class EvaluationVisualizer:
         plt.plot(np.linalg.norm(self.body_angular_vel_all, axis=1), 'm--', label='body_angular_vel_all_norm')
         plt.legend()
         plt.savefig(self.save_path + "angular_vel.png")
+        # print(f"finale angular vel {np.linalg.norm(self.body_angular_vel_all, axis=1)[-1]}")
 
         plt.figure(figsize=[20, 10])
         if self.is_delta:
             plt.plot(np.linalg.norm(self.delta_ouzel_position_offet_W_all - self.action_lin_corr_all, axis=1), 'r-',
                      label='ouzel_pos_W_error')
             plt.plot(np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1), 'g-', label='delta_pos_W_error')
+            # print(f"final error delta {np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1)[-1]}")
+            # print(f"final error angle {self.error_angle[-1]}")
         else:
             plt.plot(np.linalg.norm(self.pos_RC_W_all, axis=1), 'r-', label='pos_W_error')
         plt.plot(self.error_angle, 'b-', label='angle_error_rad')
