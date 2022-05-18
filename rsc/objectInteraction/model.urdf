@@ -16,6 +16,7 @@
       <robotParam>urdf_object </robotParam>
     </plugin>
   </gazebo>
+
   <link name="shelf">
     <inertial>
       <origin rpy="0 0 0" xyz="0 -0.2 0"/>
@@ -32,6 +33,7 @@
       </material>
     </visual>
   </link>
+
   <link name="door">
     <inertial>
       <origin rpy="0 0 0" xyz="0 -0.1795 0"/>
@@ -57,6 +59,7 @@
       </material>
     </collision>
   </link>
+
   <link name="door_hinge">
     <inertial>
       <mass value="0.01"/>
@@ -64,11 +67,14 @@
       <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
     </inertial>
   </link>
+
+
   <joint name="door_hinge_joint" type="fixed">
     <parent link="shelf"/>
     <child link="door_hinge"/>
     <origin xyz="0.020999999999999998 -0.381 0.374"/>
   </joint>
+
   <link name="axis_link">
     <inertial>
       <mass value="0.01"/>
@@ -76,6 +82,7 @@
       <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
     </inertial>
   </link>
+
   <joint name="axis_joint" type="fixed">
     <parent link="door_hinge"/>
     <child link="axis_link"/>
@@ -94,6 +101,7 @@
     <child link="door"/>
     <origin xyz="0.0 0.0 0.0"/>
   </joint>
+  
   <link name="handle_link">
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -119,6 +127,7 @@
       </material>
     </collision>
   </link>
+  
   <link name="handle_support_left">
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -144,6 +153,7 @@
       </material>
     </collision>
   </link>
+
   <link name="handle_support_right">
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -175,24 +185,28 @@
     <origin rpy="0 0 0" xyz="0.069 0.338 -0.024"/>
     <!-- height handle + half the width door, 0.30 minus some offset -->
   </joint>
+  
   <joint name="handle_ref" type="fixed">
     <parent link="handle_link"/>
     <child link="handle_ref"/>
-    <origin rpy="0 0 0" xyz="-0.0405 0 0"/>
+    <origin rpy="0 0 0" xyz="-0.050 0 0"/> <!-- was -0.0405 -->
     <!-- height handle + half the width door, 0.30 minus some offset -->
   </joint>
+  
   <link name="handle_ref">
     <inertial>
-      <mass value="0.01"/>
+      <mass value="0.0"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
     </inertial>
   </link>
+
   <joint name="handle_support_left_joint" type="fixed">
     <parent link="handle_link"/>
     <child link="handle_support_left"/>
     <origin rpy="0 0 0" xyz="-0.0285 0 -0.08"/>
   </joint>
+  
   <joint name="handle_support_right_joint" type="fixed">
     <parent link="handle_link"/>
     <child link="handle_support_right"/>
