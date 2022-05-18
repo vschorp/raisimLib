@@ -27,7 +27,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     
     /// add objects 
     ouzel_ = world_->addArticulatedSystem(resourceDir_ + "/ouzel/temp.urdf");
-    shelf_ = world_->addArticulatedSystem(resourceDir_ + "/objectInteraction/model.urdf");
+    shelf_ = world_->addArticulatedSystem(resourceDir_ + "/objectInteraction/shelf.urdf");
 
     shelf_->setName("shelf");
     ouzel_->setName("ouzel");
@@ -52,7 +52,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// initialize containers
     gc_.setZero(gcDim_); gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_); gv_init_.setZero(gvDim_);
-    
     gc_shelf_.setZero(gcDim_shelf_); gc_init_shelf_.setZero(gcDim_shelf_);
     gv_shelf_.setZero(gvDim_shelf_); gv_init_shelf_.setZero(gvDim_shelf_); 
 
@@ -94,14 +93,11 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     // Add sensors
     auto* odometry_noise = new raisim_sensors::odometryNoise(control_dt_, cfg["odometryNoise"]);
-    odometry_ = raisim_sensors::odometry(ouzel_, control_dt_, "ouzel", "ouzel/base_link", odometry_noise);
+    odometry_ = raisim_sensors::odometry(ouzel_, control_dt_, "ouzel", "hook", odometry_noise);
     // odometry(raisim::ArticulatedSystem *robot, double sampleTime, const std::string child_frame_name, const std::string sensor_link_name , noise<Eigen::VectorXd> * noise_source = NULL)
-    odometry_shelf_ = raisim_sensors::odometry(shelf_, control_dt_, "shelf", "measured_joint_link", odometry_noise);
-    
-    
+    odometry_shelf_ = raisim_sensors::odometry(shelf_, control_dt_, "shelf", "handle_ref", odometry_noise);
     // to add: odometry_handle_link 
 
-    
 
     /// indices of links that should not make contact with ground -> no ground
 //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
@@ -258,6 +254,14 @@ class ENVIRONMENT : public RaisimGymEnv {
     bodyLinearVel_gt_ = odometry_measurement_gt.segment(7, 3);
     bodyAngularVel_gt_ = odometry_measurement_gt.segment(10, 3);
 
+    if (count==0)
+    {
+      std::cout << "----- \n" << position_W_ << std::endl;
+      count+=1;
+    }
+    
+    
+
     ouzel_->getState(gc_, gv_);
 
     odometry_shelf_.update();
@@ -266,9 +270,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     orientation_W_B_shelf_ = Eigen::Quaterniond(odometry_measurement_shelf(3), odometry_measurement_shelf(4), odometry_measurement_shelf(5), odometry_measurement_shelf(6)).normalized();
     bodyLinearVel_shelf_ = odometry_measurement_shelf.segment(7, 3);
     bodyAngularVel_shelf_ = odometry_measurement_shelf.segment(10, 3);
-    
-    // std::cout << "position_W_shelf_: " << position_W_shelf_ << std::endl;
 
+    
     Eigen::VectorXd odometry_measurement_shelf_gt = odometry_.getMeasGT();
     position_W_shelf_gt_ = odometry_measurement_shelf_gt.segment(0, 3);
     orientation_W_B_shelf_gt_ = Eigen::Quaterniond(odometry_measurement_shelf_gt(3), odometry_measurement_shelf_gt(4), odometry_measurement_shelf_gt(5), odometry_measurement_shelf_gt(6)).normalized();
@@ -430,6 +433,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
 
+  int count = 0;
   int gcDim_, gvDim_, nJoints_, gcDim_shelf_, gvDim_shelf_, nJoints_shelf_;
   bool visualizable_ = false;
   bool onlyInteraction = true;
