@@ -513,6 +513,7 @@ private:
     Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_),
                                   unifDistPlusMinusOne_(gen_),
                                   unifDistPlusMinusOne_(gen_));
+    //    init_position << 0.0, 0.0, 0.0;
     ouzel_position_W_ = init_position;
 
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_),
@@ -567,6 +568,7 @@ private:
         std::abs(unifDistPlusMinusOne_(gen_)) * 1.4,
         std::abs(unifDistPlusMinusOne_(gen_)) * 1.4,
         std::abs(unifDistPlusMinusOne_(gen_)) * 1.4);
+    //    init_joint_angles << 0.5, 0.5, 0.5;
     delta_sym_->setJointAngles(init_joint_angles);
 
     // reset reference
@@ -577,6 +579,8 @@ private:
     ref_delta_position_ = ouzel_position_W_ + initialDistanceOffset_ *
                                                   unifDistPlusMinusOne_(gen_) *
                                                   ref_delta_position;
+    //    ref_delta_position_ = ouzel_position_W_ + Eigen::Vector3d(0.0, 0.0,
+    //    0.4);
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_),
                                           unifDistPlusMinusOne_(gen_),

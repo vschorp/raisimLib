@@ -203,7 +203,7 @@ class EvaluationVisualizer:
         plt.plot(np.linalg.norm(self.body_linear_vel_all, axis=1), 'm--', label='body_linear_vel_all_norm')
         plt.legend()
         plt.savefig(self.save_path + "linear_vel.png")
-        # print(f"finale linear vel {np.linalg.norm(self.body_linear_vel_all, axis=1)[-1]}")
+        print(f"finale linear vel {np.linalg.norm(self.body_linear_vel_all, axis=1)[-1]}")
 
         plt.figure(figsize=[20, 10])
         plt.plot(self.body_angular_vel_all[:, 0], 'r-', label='body_angular_vel_all_x')
@@ -212,15 +212,15 @@ class EvaluationVisualizer:
         plt.plot(np.linalg.norm(self.body_angular_vel_all, axis=1), 'm--', label='body_angular_vel_all_norm')
         plt.legend()
         plt.savefig(self.save_path + "angular_vel.png")
-        # print(f"finale angular vel {np.linalg.norm(self.body_angular_vel_all, axis=1)[-1]}")
+        print(f"finale angular vel {np.linalg.norm(self.body_angular_vel_all, axis=1)[-1]}")
 
         plt.figure(figsize=[20, 10])
         if self.is_delta:
             plt.plot(np.linalg.norm(self.delta_ouzel_position_offet_W_all - self.action_lin_corr_all, axis=1), 'r-',
                      label='ouzel_pos_W_error')
             plt.plot(np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1), 'g-', label='delta_pos_W_error')
-            # print(f"final error delta {np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1)[-1]}")
-            # print(f"final error angle {self.error_angle[-1]}")
+            print(f"final error delta {np.linalg.norm(self.ref_delta_position_offset_W_all, axis=1)[-1]}")
+            print(f"final error angle {self.error_angle[-1]}")
         else:
             plt.plot(np.linalg.norm(self.pos_RC_W_all, axis=1), 'r-', label='pos_W_error')
         plt.plot(self.error_angle, 'b-', label='angle_error_rad')
