@@ -11,8 +11,8 @@ environment:
   num_envs: 52 #26
   eval_every_n: 1000 #200
   num_threads: 60 #30
-  simulation_dt: 0.002
-  control_dt: 0.01
+  simulation_dt: 0.0025
+  control_dt: 0.005
   max_time: 4.0
   reward:
     waypointDist:

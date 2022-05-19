@@ -6,12 +6,12 @@ learning_rate: 5e-4
 use_adaptive_lr: False
 
 environment:
-  render: True
-  num_envs: 1
-  eval_every_n: 100
-  num_threads: 1
-  simulation_dt: 0.002
-  control_dt: 0.01
+  render: False
+  num_envs: 100 #26
+  eval_every_n: 1000 #200
+  num_threads: 60 #30
+  simulation_dt: 0.0025
+  control_dt: 0.005
   max_time: 4.0
   reward:
     waypointDist:
