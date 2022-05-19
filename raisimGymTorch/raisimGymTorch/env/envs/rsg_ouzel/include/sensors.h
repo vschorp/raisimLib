@@ -104,6 +104,7 @@ public:
   /// \param[in] sampleTime noise computation sample time
   noise(double sampleTime) : sampleTime_(sampleTime) {
     standardNormalDistribution_ = std::normal_distribution<double>(0.0, 1.0);
+    unifDistPlusMinusOne_ = std::uniform_real_distribution<double>(-1.0, 1.0);
   };
 
   /// \brief Get sensor noise.
@@ -115,6 +116,7 @@ protected:
   T noise_;
   std::mt19937 randomGenerator_;
   std::normal_distribution<double> standardNormalDistribution_;
+  std::uniform_real_distribution<double> unifDistPlusMinusOne_;
 };
 
 /**
@@ -411,7 +413,7 @@ public:
   ///\param[in] child_frame_name name of the frame for the published transform
   ///\param[in] sensor_link_name URDF link name where to place the sensor
   ///\param[in] noise_source noise source for the measured quantity (NULL if no
-  ///noise)
+  /// noise)
   vicon(raisim::ArticulatedSystem *robot, double sampleTime,
         const std::string child_frame_name, const std::string sensor_link_name,
         noise<Eigen::VectorXd> *noise_source = NULL)
@@ -450,7 +452,7 @@ public:
   ///\param[in] child_frame_name name of the frame for the published transform
   ///\param[in] sensor_link_name URDF link name where to place the sensor
   ///\param[in] noise_source noise source for the measured quantity (NULL if no
-  ///noise)
+  /// noise)
   vicon(raisim::SingleBodyObject *obj, double sampleTime,
         const std::string child_frame_name,
         noise<Eigen::VectorXd> *noise_source = NULL)

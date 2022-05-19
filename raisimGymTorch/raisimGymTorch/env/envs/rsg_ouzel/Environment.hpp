@@ -305,7 +305,7 @@ private:
   }
 
   void computeErrorMetrics(double &waypointDist, double &errorAngle) {
-    waypointDist = (position_W_gt_ - ref_position_).squaredNorm();
+    waypointDist = (position_W_gt_ - ref_position_).norm();
     errorAngle = orientation_W_B_gt_.angularDistance(ref_orientation_);
   }
 
