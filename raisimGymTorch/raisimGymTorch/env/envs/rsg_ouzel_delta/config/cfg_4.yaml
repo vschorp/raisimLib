@@ -4,15 +4,15 @@ record_video: yes
 activation: tanh
 on_cluster: True
 learning_rate: 5e-4
-use_adaptive_lr: True
+use_adaptive_lr: False
 
 environment:
   render: False
   num_envs: 100 #26
   eval_every_n: 1000 #200
   num_threads: 60 #30
-  simulation_dt: 0.0025
-  control_dt: 0.005
+  simulation_dt: 0.002
+  control_dt: 0.01
   max_time: 4.0
   reward:
     waypointDist:
@@ -20,11 +20,15 @@ environment:
     orientError:
       coeff: -1.0
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e-2
+      coeff: -1.0e-1
+    deltaOuzelRefPositionOffsetDiff:
+      coeff: -1.0e-1
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
       coeff: -1.0e-2
+    deltaJointAnglesDiff:
+      coeff: -1.0e-1
     deltaJointAnglesClamp:
       coeff: -1.0e1
   termination:
@@ -37,7 +41,7 @@ environment:
       waypointDist: 0.05
       angleErrorDeg: 5.0
       linearVel: 0.02
-      angularVelDeg: 2.0
+      angularVelDeg: 1.0
   initialisation:
     distanceOffset: 1.5
     angleOffsetDeg: 45.0

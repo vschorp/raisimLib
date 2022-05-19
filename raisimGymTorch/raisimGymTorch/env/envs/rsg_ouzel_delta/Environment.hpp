@@ -143,6 +143,9 @@ public:
     odometry_ = raisim_sensors::odometry(ouzel_, control_dt_, "ouzel",
                                          "ouzel/base_link", odometry_noise);
 
+    delta_ouzel_ref_position_offset_previous_ = Eigen::Vector3d::Zero();
+    ref_delta_joint_pos_previous_ = Eigen::Vector3d::Zero();
+
     /// indices of links that should not make contact with ground -> no ground
     //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
     //    footIndices_.insert(anymal_->getBodyIdx("RF_SHANK"));
@@ -352,6 +355,25 @@ public:
     //    }
     updateObservation();
 
+    Eigen::Vector3d delta_ouzel_ref_position_offset_diff;
+    if (delta_ouzel_ref_position_offset_previous_ == Eigen::Vector3d::Zero()) {
+      delta_ouzel_ref_position_offset_diff = Eigen::Vector3d::Zero();
+    } else {
+      delta_ouzel_ref_position_offset_diff =
+          delta_ouzel_ref_position_offset -
+          delta_ouzel_ref_position_offset_previous_;
+    }
+    delta_ouzel_ref_position_offset_previous_ = delta_ouzel_ref_position_offset;
+
+    Eigen::Vector3d ref_delta_joint_pos_diff;
+    if (ref_delta_joint_pos_previous_ == Eigen::Vector3d::Zero()) {
+      ref_delta_joint_pos_diff = Eigen::Vector3d::Zero();
+    } else {
+      ref_delta_joint_pos_diff =
+          ref_delta_joint_pos - ref_delta_joint_pos_previous_;
+    }
+    ref_delta_joint_pos_previous_ = ref_delta_joint_pos_diff;
+
     // get rewards
     double waypoint_dist_delta, error_angle;
     computeErrorMetrics(waypoint_dist_delta, error_angle);
@@ -366,12 +388,16 @@ public:
     rewards_.record("orientError", float(error_angle));
     rewards_.record("deltaOuzelRefPositionOffset",
                     float(delta_ouzel_ref_position_offset.squaredNorm()));
+    rewards_.record("deltaOuzelRefPositionOffsetDiff",
+                    float(delta_ouzel_ref_position_offset_diff.squaredNorm()));
     rewards_.record("orientRefCorr",
                     float(ref_ouzel_orientation_corr_angle_axis.angle()));
     rewards_.record("deltaJointAngles",
                     float(std::abs(ref_delta_joint_pos(0)) +
                           std::abs(ref_delta_joint_pos(1)) +
                           std::abs(ref_delta_joint_pos(2))));
+    rewards_.record("deltaJointAnglesDiff",
+                    float(ref_delta_joint_pos_diff.squaredNorm()));
     rewards_.record(
         "deltaJointAnglesClamp",
         float((ref_delta_joint_pos - ref_delta_joint_pos_clamped).norm()));
@@ -674,6 +700,8 @@ private:
   std::set<size_t> footIndices_;
   Eigen::Vector3d ref_delta_position_;
   Eigen::Quaterniond ref_ouzel_orientation_;
+  Eigen::Vector3d delta_ouzel_ref_position_offset_previous_;
+  Eigen::Vector3d ref_delta_joint_pos_previous_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 

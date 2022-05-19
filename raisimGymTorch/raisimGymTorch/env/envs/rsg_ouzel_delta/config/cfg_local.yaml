@@ -19,11 +19,15 @@ environment:
     orientError:
       coeff: -1.0
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e-2
+      coeff: -1.0e-1
+    deltaOuzelRefPositionOffsetDiff:
+      coeff: -1.0e-1
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
       coeff: -1.0e-2
+    deltaJointAnglesDiff:
+      coeff: -1.0e-1
     deltaJointAnglesClamp:
       coeff: -1.0e1
   termination:
