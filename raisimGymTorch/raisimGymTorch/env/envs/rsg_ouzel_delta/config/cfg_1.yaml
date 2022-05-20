@@ -8,7 +8,7 @@ use_adaptive_lr: False
 
 environment:
   render: False
-  num_envs: 100 #26
+  num_envs: 52 #26
   eval_every_n: 1000 #200
   num_threads: 60 #30
   simulation_dt: 0.0025
@@ -20,9 +20,9 @@ environment:
     orientError:
       coeff: -1.0
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e-1
+      coeff: -1.0e0
     deltaOuzelRefPositionOffsetDiff:
-      coeff: -1.0e-1
+      coeff: -1.0e0
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
@@ -37,11 +37,12 @@ environment:
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 100.0
+      reward: 0.0
       waypointDist: 0.05
       angleErrorDeg: 5.0
       linearVel: 0.02
       angularVelDeg: 1.0
+      minTime: 1.0
   initialisation:
     distanceOffset: 1.5
     angleOffsetDeg: 45.0
