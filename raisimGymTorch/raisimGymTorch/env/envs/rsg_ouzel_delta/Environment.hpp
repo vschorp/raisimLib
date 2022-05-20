@@ -136,6 +136,8 @@ public:
     terminalSuccessAngularVel_ =
         cfg["termination"]["success"]["angularVelDeg"].template As<float>() /
         180.0 * M_PI;
+    min_time_in_success_state_ =
+        cfg["termination"]["success"]["minTime"].template As<float>();
 
     // Add sensors
     auto *odometry_noise =
@@ -145,6 +147,7 @@ public:
 
     delta_ouzel_ref_position_offset_previous_ = Eigen::Vector3d::Zero();
     ref_delta_joint_pos_previous_ = Eigen::Vector3d::Zero();
+    time_in_success_state_ = 0.0;
 
     /// indices of links that should not make contact with ground -> no ground
     //    footIndices_.insert(anymal_->getBodyIdx("LF_SHANK"));
@@ -158,6 +161,60 @@ public:
       server_->launchServer();
       server_->focusOn(ouzel_);
     }
+
+    //    auto mass_vector = ouzel_->getMass();
+    //    auto com_W_vector = ouzel_->getBodyCOM_W();
+    //    auto inertia_B_vector = ouzel_->getInertia();
+    //    double total_mass = 0;
+    //    raisim::Vec<3> com_W = Eigen::Vector3d::Zero();
+    //    raisim::Vec<3> inertia_W = Eigen::Vector3d::Zero();
+    //    raisim::Vec<3> pos_W;
+    //    raisim::Vec<3> pos_body_W;
+    //    raisim::Vec<3> pos_body_W_squared;
+    //    for (int i = 0; i < mass_vector.size(); i++) {
+    //      total_mass += mass_vector[i];
+    //      com_W += com_W_vector[i] * mass_vector[i];
+    //      ouzel_->getPosition(i, pos_body_W);
+    //      pos_body_W -= ouzel_->getCOM();
+    //    }
+    //    com_W = com_W / total_mass;
+    //    ouzel_->getPosition(0, pos_W);
+    //    raisim::Vec<3> com_offset = com_W - pos_W;
+    //    auto a = ouzel_->getCompositeCOM();
+    //    auto b = ouzel_->getInertia();
+    //    std::cout << "ouzel mass: " << ouzel_->getCompositeMass()[0] <<
+    //    std::endl; std::cout << "ouzel com W: " << ouzel_->getCOM() <<
+    //    std::endl; std::cout << "ouzel com_offset: " << com_offset <<
+    //    std::endl;
+    //    //    std::cout << "ouzel inertia: " << ouzel_->getMassMatrix() <<
+    //    //    std::endl; std::cout << "ouzel inertia: " <<
+    //    //    ouzel_->getMassMatrix().size()
+    //    //              << std::endl;
+    //
+    //    //    int baseLink_ = ouzel_->getBodyIdx("ouzel/base_link");
+    //    raisim::Vec<3> com_pos = ouzel_->getCOM();
+    //    const std::vector<std::string> bodyList = ouzel_->getBodyNames();
+    //    raisim::Vec<3> base_link_pos_W;
+    //    ouzel_->getFramePosition(baseLink_, base_link_pos_W);
+    //    double Ixx = 0, Iyy = 0, Izz = 0;
+    //    for (std::string bodyName : bodyList) {
+    //      size_t bodyIdx;
+    //      bodyIdx = ouzel_->getBodyIdx(bodyName);
+    //      raisim::Vec<3> point_W;
+    //      ouzel_->getFramePosition(bodyIdx, point_W);
+    //      double dx = point_W(0) - com_pos(0);
+    //      double dy = point_W(1) - com_pos(1);
+    //      double dz = point_W(2) - com_pos(2);
+    //      Ixx += (dy * dy + dz * dz) * ouzel_->getMass(bodyIdx);
+    //      Iyy += (dx * dx + dz * dz) * ouzel_->getMass(bodyIdx);
+    //      Izz += (dy * dy + dx * dx) * ouzel_->getMass(bodyIdx);
+    //    }
+    //
+    //    std::cout << "Inertia diagonal w.r.t. COM: " << Ixx << " " << Iyy << "
+    //    "
+    //              << Izz << std::endl;
+    //    std::cout << "ouzel inertia: " << ouzel_->getCompositeInertia()[0]
+    //              << std::endl;
   }
 
   void init() final {}
@@ -167,6 +224,7 @@ public:
     ouzel_->setState(gc_init_, gv_init_);
     //    std::cout << "gc init: " << gc_init_ << std::endl;
     //    std::cout << "gv init: " << gv_init_ << std::endl;
+    time_in_success_state_ = 0.0;
     updateObservation();
     //    std::cout << "end of reset" << std::endl;
     //    auto base_link_idx = ouzel_->getBodyIdx("ouzel/base_link");
@@ -192,6 +250,8 @@ public:
     //    error_anglew / M_PI * 180 << std::endl;
 
     auto actionD = action.cast<double>();
+    //    Eigen::Vector3d delta_ouzel_ref_position_offset =
+    //        Eigen::Vector3d(0.0, 0.0, 0.3);
     Eigen::Vector3d delta_ouzel_ref_position_offset = actionD.segment(0, 3);
     Eigen::Quaterniond ref_ouzel_orientation_corr =
         QuaternionFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
@@ -508,7 +568,6 @@ public:
     Eigen::VectorXd odometry_measurement_gt = odometry_.getMeasGT();
     Eigen::Vector3d lin_vel_gt = odometry_measurement_gt.segment(7, 3);
     Eigen::Vector3d ang_vel_gt = odometry_measurement_gt.segment(10, 3);
-
     if (waypoint_dist_delta > terminalOOBWaypointDist_ ||
         error_angle > terminalOOBAngleError_) {
       terminalReward = terminalOOBRewardCoeff_;
@@ -518,14 +577,21 @@ public:
                error_angle < terminalSuccessAngleError_ &&
                lin_vel_gt.norm() < terminalSuccessLinearVel_ &&
                ang_vel_gt.norm() < terminalSuccessAngularVel_) {
-      terminalReward = terminalSuccessRewardCoeff_;
+      time_in_success_state_ += control_dt_;
+      if (time_in_success_state_ >= min_time_in_success_state_) {
+        terminalReward = terminalSuccessRewardCoeff_;
+        return true;
+      }
+      terminalReward = 0.f;
+      return false;
       //      std::cout << "termination success" << std::endl;
-      //      std::cout << "waypoint_dist_delta: " << waypoint_dist_delta <<
+      //      std::cout << "waypoint_dist_delta: " <<
+      //      waypoint_dist_delta <<
       //      std::endl; std::cout << "error_angle: " << error_angle <<
       //      std::endl;
-      return true;
     } else {
       terminalReward = 0.f;
+      time_in_success_state_ = 0.0;
       return false;
     }
   }
@@ -539,7 +605,7 @@ private:
     Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_),
                                   unifDistPlusMinusOne_(gen_),
                                   unifDistPlusMinusOne_(gen_));
-    //    init_position << 0.0, 0.0, 0.0;
+    //    init_position << 0.0, 0.0, 0.3;
     ouzel_position_W_ = init_position;
 
     Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_),
@@ -605,8 +671,8 @@ private:
     ref_delta_position_ = ouzel_position_W_ + initialDistanceOffset_ *
                                                   unifDistPlusMinusOne_(gen_) *
                                                   ref_delta_position;
-    //    ref_delta_position_ = ouzel_position_W_ + Eigen::Vector3d(0.0, 0.0,
-    //    0.4);
+    //    ref_delta_position_ = ouzel_position_W_ - Eigen::Vector3d(0.0, 0.0,
+    //    0.3);
 
     Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_),
                                           unifDistPlusMinusOne_(gen_),
@@ -719,6 +785,9 @@ private:
   Eigen::Vector3d delta_position_W_gt_;
 
   int baseLink_;
+
+  float time_in_success_state_;
+  float min_time_in_success_state_;
 
   //  Eigen::VectorXd previous_odometry_measurement_gt_;
 
