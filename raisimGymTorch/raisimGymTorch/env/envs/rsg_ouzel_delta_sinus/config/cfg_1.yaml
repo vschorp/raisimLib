@@ -14,6 +14,10 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
+  sinus_max_amplitude: 0.3
+  sinus_max_wavelength: 1.0
+  max_lateral_speed: 0.5
+  ref_sampling_time: 0.01
   reward:
     waypointDist:
       coeff: -1.0
@@ -42,7 +46,7 @@ environment:
       angleErrorDeg: 5.0
       linearVel: 0.02
       angularVelDeg: 1.0
-      minTime: 1.0
+      minTime: 10.0 #deactivating success state
   initialisation:
     distanceOffset: 1.5
     angleOffsetDeg: 45.0

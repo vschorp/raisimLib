@@ -1,6 +1,6 @@
 import numpy as np
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymTorch.env.bin import rsg_ouzel_delta
+from raisimGymTorch.env.bin import rsg_ouzel_delta_sinus
 from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymTorch.algo.ppo.module as ppo_module
 from raisimGymTorch.helper.output_helper import EvaluationVisualizer
@@ -9,7 +9,6 @@ import math
 import time
 import torch
 import argparse
-
 
 # configuration
 parser = argparse.ArgumentParser()
@@ -30,7 +29,7 @@ cfg = YAML().load(open(config_fpath, "r"))
 cfg["environment"]["num_envs"] = 1
 control_dt = cfg["environment"]["control_dt"]
 
-env = VecEnv(rsg_ouzel_delta.RaisimGymEnv(home_path + "/rsc", dump(cfg["environment"], Dumper=RoundTripDumper)))
+env = VecEnv(rsg_ouzel_delta_sinus.RaisimGymEnv(home_path + "/rsc", dump(cfg["environment"], Dumper=RoundTripDumper)))
 # seed = 1652805540
 seed = int(time.time())
 print(f"the seed is {seed}")
@@ -97,7 +96,8 @@ else:
                     "average ll reward: ", "{:0.10f}".format(reward_ll_sum / (step + 1 - start_step_id))
                 )
             )
-            print("{:<40} {:>6}".format("time elapsed [sec]: ", "{:6.4f}".format((step + 1 - start_step_id) * control_dt)))
+            print("{:<40} {:>6}".format("time elapsed [sec]: ",
+                                        "{:6.4f}".format((step + 1 - start_step_id) * control_dt)))
             print("----------------------------------------------------\n")
             start_step_id = step + 1
             reward_ll_sum = 0.0
