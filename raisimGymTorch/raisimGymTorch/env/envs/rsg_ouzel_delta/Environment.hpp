@@ -264,9 +264,10 @@ public:
     rewards_.record("orientRefCorr",
                     float(ref_ouzel_orientation_corr_angle_axis.angle()));
     rewards_.record("deltaJointAngles",
-                    float(std::abs(ref_delta_joint_pos(0)) +
-                          std::abs(ref_delta_joint_pos(1)) +
-                          std::abs(ref_delta_joint_pos(2))));
+                    float(ref_delta_joint_pos.squaredNorm()));
+    //                    float(std::abs(ref_delta_joint_pos(0)) +
+    //                          std::abs(ref_delta_joint_pos(1)) +
+    //                          std::abs(ref_delta_joint_pos(2))));
     rewards_.record("deltaJointAnglesDiff",
                     float(ref_delta_joint_pos_diff.squaredNorm()));
     rewards_.record(

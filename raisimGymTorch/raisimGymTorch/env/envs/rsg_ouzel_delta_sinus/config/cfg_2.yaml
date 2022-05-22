@@ -14,6 +14,10 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
+  sinus_max_amplitude: 0.3
+  sinus_max_wavelength: 1.0
+  max_lateral_speed: 0.5
+  ref_sampling_time: 0.01
   reward:
     waypointDist:
       coeff: -1.0
@@ -26,9 +30,9 @@ environment:
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
-      coeff: -1.0e-2
+      coeff: -5.0e-3
     deltaJointAnglesDiff:
-      coeff: -1.0e-1
+      coeff: -5.0e-2
     deltaJointAnglesClamp:
       coeff: -1.0e1
   termination:
@@ -38,11 +42,11 @@ environment:
       angleErrorDeg: 60.0
     success:
       reward: 0.0
-      waypointDist: 0.02
+      waypointDist: 0.05
       angleErrorDeg: 5.0
       linearVel: 0.02
       angularVelDeg: 1.0
-      minTime: 1.0
+      minTime: 10.0 #deactivating success state
   initialisation:
     distanceOffset: 1.5
     angleOffsetDeg: 45.0
