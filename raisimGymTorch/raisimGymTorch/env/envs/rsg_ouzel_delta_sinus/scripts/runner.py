@@ -17,7 +17,7 @@ import argparse
 print("started runner.py script")
 
 # task specification
-task_name = "ouzel_delta_planning"
+task_name = "ouzel_delta_sinus_planning"
 
 # configuration
 parser = argparse.ArgumentParser()
