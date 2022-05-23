@@ -71,12 +71,6 @@ public:
     /// initialize delta
     delta_sym_ =
         new delta_dynamics::DeltaController(cfg_["deltaArm"], control_dt_);
-    if (render_) {
-      delta_eef_ = world_->addCylinder(0.05, 0.008, 0.01, "default",
-                                       raisim::COLLISION(15));
-      delta_eef_->setPosition(2, 2, 2);
-      delta_eef_->setBodyType(raisim::BodyType::STATIC);
-    }
     ee_vel_prev_ = Eigen::Vector3d::Zero();
     B_om_WB_prev_ = Eigen::Vector3d::Zero();
     pos_offset_BD_ =
@@ -102,8 +96,6 @@ public:
     initialAngularVel_ =
         cfg["initialisation"]["angularVelDeg"].template As<float>() / 180.0 *
         M_PI;
-
-    resetInitialConditions();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
     obDim_ = 36;
@@ -164,7 +156,20 @@ public:
       server_ = std::make_unique<raisim::RaisimServer>(world_.get());
       server_->launchServer();
       server_->focusOn(ouzel_);
+      if (render_) {
+        delta_eef_ =
+            server_->addVisualCylinder("delta_eef", 0.1, 0.008, 0.0, 0.0, 1.0);
+        delta_eef_->setPosition(0, 0, 0);
+        omav_ref_marker_ =
+            server_->addVisualCylinder("omav_ref", 0.2, 0.008, 1.0, 0.0, 0.0);
+        omav_ref_marker_->setPosition(0, 0, 0);
+        delta_ee_ref_marker_ = server_->addVisualCylinder("delta_ee_ref", 0.15,
+                                                          0.008, 0.0, 1.0, 0.0);
+        delta_ee_ref_marker_->setPosition(0, 0, 0);
+      }
     }
+
+    resetInitialConditions();
 
     //    auto mass_vector = ouzel_->getMass();
     //    auto com_W_vector = ouzel_->getBodyCOM_W();
@@ -264,6 +269,18 @@ public:
     //    ref_ouzel_orientation_corr.coeffs() << std::endl;
     controller_.adaptRefFromAction(delta_ouzel_ref_position_offset,
                                    ref_ouzel_orientation_corr);
+
+    if (visualizable_ && render_) {
+      Eigen::Vector3d pos =
+          ref_delta_position_ + delta_ouzel_ref_position_offset;
+      omav_ref_marker_->setPosition(pos(0), pos(1), pos(2));
+      Eigen::Quaterniond eigen_quat =
+          ref_ouzel_orientation_ * ref_ouzel_orientation_corr;
+      eigen_quat.normalize();
+      Eigen::Vector4d quat(eigen_quat.w(), eigen_quat.x(), eigen_quat.y(),
+                           eigen_quat.z());
+      omav_ref_marker_->setOrientation(quat);
+    }
 
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, control_dt_);
@@ -389,7 +406,7 @@ public:
       //      force_B_old = force_B;
       //      torque_B_old = torque_B;
 
-      if (render_) {
+      if (visualizable_ && render_) {
         eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
                     ouzel_orientation_W_B_gt_.matrix() *
                         ang_offset_BD_.matrix() * ee_pos;
@@ -397,7 +414,10 @@ public:
         //                  << eef_pos_W - ouzel_position_W_gt_ << std::endl;
         delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
         //      std::cout << "eef_pos_W: " << eef_pos_W << std::endl;
-        delta_eef_->setOrientation(ouzel_orientation_W_B_gt_);
+        Eigen::Vector4d quat(
+            ouzel_orientation_W_B_gt_.w(), ouzel_orientation_W_B_gt_.x(),
+            ouzel_orientation_W_B_gt_.y(), ouzel_orientation_W_B_gt_.z());
+        delta_eef_->setOrientation(quat);
       }
 
       if (server_)
@@ -461,9 +481,10 @@ public:
     rewards_.record("orientRefCorr",
                     float(ref_ouzel_orientation_corr_angle_axis.angle()));
     rewards_.record("deltaJointAngles",
-                    float(std::abs(ref_delta_joint_pos(0)) +
-                          std::abs(ref_delta_joint_pos(1)) +
-                          std::abs(ref_delta_joint_pos(2))));
+                    float(ref_delta_joint_pos.squaredNorm()));
+    //                    float(std::abs(ref_delta_joint_pos(0)) +
+    //                          std::abs(ref_delta_joint_pos(1)) +
+    //                          std::abs(ref_delta_joint_pos(2))));
     rewards_.record("deltaJointAnglesDiff",
                     float(ref_delta_joint_pos_diff.squaredNorm()));
     rewards_.record(
@@ -478,6 +499,15 @@ public:
     ref_delta_position_[linear_dir_] += lateral_speed_ * time;
     ref_delta_position_[oscillation_dir_] +=
         sinus_amplitude_ * std::sin(sinus_angular_freq_ * time + sinus_offset_);
+    if (visualizable_ && render_) {
+      delta_ee_ref_marker_->setPosition(ref_delta_position_(0),
+                                        ref_delta_position_(1),
+                                        ref_delta_position_(2));
+      //      Eigen::Vector4d quat(
+      //          ref_ouzel_orientation_.w(), ref_ouzel_orientation_.x(),
+      //          ref_ouzel_orientation_.y(), ref_ouzel_orientation_.z());
+      //      delta_ee_ref_marker_->setOrientation(quat);
+    }
     controller_.setRef(ref_delta_position_, ref_ouzel_orientation_);
     //    std::cout << "ref_delta_position_: " << ref_delta_position_ <<
     //    std::endl;
@@ -695,6 +725,15 @@ private:
 
     ref_delta_position_ = ouzel_position_W_;
     ref_ouzel_orientation_ = ouzel_orientation_W_B_;
+    if (visualizable_ && render_) {
+      delta_ee_ref_marker_->setPosition(ref_delta_position_(0),
+                                        ref_delta_position_(1),
+                                        ref_delta_position_(2));
+      Eigen::Vector4d quat(
+          ref_ouzel_orientation_.w(), ref_ouzel_orientation_.x(),
+          ref_ouzel_orientation_.y(), ref_ouzel_orientation_.z());
+      delta_ee_ref_marker_->setOrientation(quat);
+    }
     controller_.setRef(ref_delta_position_, ref_ouzel_orientation_);
     //    std::cout << "ref_delta_angle deg: " << ref_delta_angle / M_PI * 180.0
     //    << std::endl; std::cout << "ouzel_orientation_W_B_ coeffs: " <<
@@ -778,7 +817,9 @@ private:
   raisim_sensors::odometry odometry_;
 
   delta_dynamics::DeltaController *delta_sym_;
-  raisim::Cylinder *delta_eef_;
+  raisim::Visuals *delta_eef_;
+  raisim::Visuals *omav_ref_marker_;
+  raisim::Visuals *delta_ee_ref_marker_;
   Eigen::Vector3d ee_vel_prev_;
   Eigen::Vector3d B_om_WB_prev_;
   Eigen::Vector3d pos_offset_BD_;
