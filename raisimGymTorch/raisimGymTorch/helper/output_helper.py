@@ -22,6 +22,7 @@ class EvaluationVisualizer:
             self.delta_ouzel_position_offet_W_all = np.zeros([max_steps, 3])
             self.delta_joint_angle_all = np.zeros([max_steps, 3])
             self.delta_joint_angular_vel_all = np.zeros([max_steps, 3])
+            self.ref_delta_position_abs_W_all = np.zeros([max_steps, 3])
         else:
             self.pos_RC_W_all = np.zeros([max_steps, 3])
 
@@ -63,6 +64,7 @@ class EvaluationVisualizer:
             ref_orient_W = Rotation.from_matrix(ref_orient_mat_W)
             delta_joint_angles = obs_orig[0][30:33]
             delta_joint_anglular_vel = obs_orig[0][33:36]
+            ref_delta_position_abs_W = obs_orig[0][36:39]
         else:
             pos_RC_W = obs_orig[0][0:3]
             orient_mat_W = np.vstack([obs_orig[0][3:6], obs_orig[0][6:9], obs_orig[0][9:12]]).transpose()
@@ -84,6 +86,7 @@ class EvaluationVisualizer:
             self.delta_ouzel_position_offet_W_all[step, :] = delta_ouzel_position_offet_W
             self.delta_joint_angle_all[step, :] = delta_joint_angles
             self.delta_joint_angular_vel_all[step, :] = delta_joint_anglular_vel
+            self.ref_delta_position_abs_W_all[step, :] = ref_delta_position_abs_W
         else:
             self.pos_RC_W_all[step, :] = pos_RC_W
 
@@ -115,24 +118,26 @@ class EvaluationVisualizer:
     def visualize(self):
         if self.is_delta:
             plt.figure(figsize=[20, 10])
-            plt.plot(self.zero_line[:, 0], "k-", label="zero line")
-            plt.plot(self.ref_delta_position_offset_W_all[:, 0], 'r-', label='ref_delta_position_offset_W_x')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 1], 'g-', label='ref_delta_position_offset_W_y')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 2], 'b-', label='ref_delta_position_offset_W_z')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.ref_delta_position_abs_W_all[:, 0], 'r-', label='delta_position_W_x')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.ref_delta_position_abs_W_all[:, 1], 'g-', label='delta_position_W_y')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.ref_delta_position_abs_W_all[:, 2], 'b-', label='delta_position_W_z')
+            plt.plot(self.ref_delta_position_abs_W_all[:, 0], 'r*', label='delta_ref_pos_W_x')
+            plt.plot(self.ref_delta_position_abs_W_all[:, 1], 'g*', label='delta_ref_pos_W_y')
+            plt.plot(self.ref_delta_position_abs_W_all[:, 2], 'b*', label='delta_ref_pos_W_z')
             plt.legend()
-            plt.savefig(self.save_path + "pos_delta.png")
+            plt.savefig(self.save_path + "pos_delta_abs.png")
 
         plt.figure(figsize=[20, 10])
         if self.is_delta:
-            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r-',
-                     label='ref_ouzel_position_offset_W_x')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g-',
-                     label='ref_ouzel_position_offset_W_y')
-            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b-',
-                     label='ref_ouzel_position_offset_W_z')
-            plt.plot(self.action_lin_corr_all[:, 0], 'r*', label='ref_delta_ouzel_offset_x')
-            plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_delta_ouzel_offset_y')
-            plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_delta_ouzel_offset_z')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 0] + self.ref_delta_position_abs_W_all[:, 0] + self.delta_ouzel_position_offet_W_all[:, 0], 'r-',
+                     label='ouzel_position_W_x')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 1] + self.ref_delta_position_abs_W_all[:, 1] + self.delta_ouzel_position_offet_W_all[:, 1], 'g-',
+                     label='ouzel_position_W_y')
+            plt.plot(self.ref_delta_position_offset_W_all[:, 2] + self.ref_delta_position_abs_W_all[:, 2] + self.delta_ouzel_position_offet_W_all[:, 2], 'b-',
+                     label='ouzel_position_W_z')
+            plt.plot(self.action_lin_corr_all[:, 0] + self.ref_delta_position_abs_W_all[:, 0], 'r*', label='ref_ouzel_position_W_x')
+            plt.plot(self.action_lin_corr_all[:, 1] + self.ref_delta_position_abs_W_all[:, 1], 'g*', label='ref_ouzel_position_W_y')
+            plt.plot(self.action_lin_corr_all[:, 2] + self.ref_delta_position_abs_W_all[:, 2], 'b*', label='ref_ouzel_position_W_z')
         else:
             plt.figure(figsize=[20, 10])
             plt.plot(self.pos_RC_W_all[:, 0], 'r-', label='pos_RC_W_all_x')
@@ -142,7 +147,7 @@ class EvaluationVisualizer:
             plt.plot(self.action_lin_corr_all[:, 1], 'g*', label='ref_corr_pos_W_all_y')
             plt.plot(self.action_lin_corr_all[:, 2], 'b*', label='ref_corr_pos_W_all_z')
         plt.legend()
-        plt.savefig(self.save_path + "pos_omav.png")
+        plt.savefig(self.save_path + "pos_omav_abs.png")
 
         if self.is_delta:
             plt.figure(figsize=[20, 10])

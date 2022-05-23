@@ -35,6 +35,7 @@ env.seed(seed)
 
 # shortcuts
 ob_dim = env.num_obs
+policy_input_dim = ob_dim - 3
 act_dim = env.num_acts
 
 weight_path = args.weight
@@ -61,10 +62,10 @@ else:
     start_step_id = 0
 
     print("loading model: ", weight_path)
-    loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, ob_dim, act_dim)
+    loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, policy_input_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)["actor_architecture_state_dict"])
 
-    example_input = torch.rand(1, ob_dim)
+    example_input = torch.rand(1, policy_input_dim)
     traced_script_module = torch.jit.trace(loaded_graph.architecture, example_input)
     output_fname = os.path.join(weight_dir, "trained_model.pt")
     traced_script_module.save(output_fname)

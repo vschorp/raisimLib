@@ -10,7 +10,6 @@ import time
 import torch
 import argparse
 
-
 # configuration
 parser = argparse.ArgumentParser()
 parser.add_argument("-w", "--weight", help="trained weight path", type=str, default="")
@@ -41,6 +40,7 @@ visualize_simulation = True
 
 # shortcuts
 ob_dim = env.num_obs
+policy_input_dim = ob_dim - 3
 act_dim = env.num_acts
 
 weight_path = args.weight
@@ -67,7 +67,7 @@ else:
     start_step_id = 0
 
     print("Visualizing and evaluating the policy: ", weight_path)
-    loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, ob_dim, act_dim)
+    loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, policy_input_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)["actor_architecture_state_dict"])
 
     env.load_scaling(weight_dir, int(iteration_number))
@@ -82,8 +82,9 @@ else:
         if visualize_simulation:
             time.sleep(control_dt)
         obs = env.observe(False)
+        policy_obs = obs[:, :-3]
         # print(obs)
-        action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
+        action_ll = loaded_graph.architecture(torch.from_numpy(policy_obs).cpu())
         # action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]])
         # action_ll = torch.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
         reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
@@ -97,7 +98,8 @@ else:
                     "average ll reward: ", "{:0.10f}".format(reward_ll_sum / (step + 1 - start_step_id))
                 )
             )
-            print("{:<40} {:>6}".format("time elapsed [sec]: ", "{:6.4f}".format((step + 1 - start_step_id) * control_dt)))
+            print("{:<40} {:>6}".format("time elapsed [sec]: ",
+                                        "{:6.4f}".format((step + 1 - start_step_id) * control_dt)))
             print("----------------------------------------------------\n")
             start_step_id = step + 1
             reward_ll_sum = 0.0

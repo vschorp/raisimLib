@@ -85,7 +85,7 @@ public:
         M_PI;
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 36;
+    obDim_ = 39;
     actionDim_ = 12;
     ouzel_position_W_.setZero();
     ouzel_orientation_W_B_.setIdentity();
@@ -389,7 +389,7 @@ public:
         ouzel_orientation_W_B_mat.col(2), ouzel_linear_vel_B_,
         ouzel_angular_vel_B_, ref_ouzel_orientation_mat.col(0),
         ref_ouzel_orientation_mat.col(1), ref_ouzel_orientation_mat.col(2),
-        delta_joint_angle_, delta_joint_angular_vel_;
+        delta_joint_angle_, delta_joint_angular_vel_, ref_delta_position_;
     ob = ob_double.cast<float>();
     if (!Eigen::isfinite(ob.array()).all()) {
       std::cout << "ob is nan: " << ob << std::endl;
