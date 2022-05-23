@@ -86,10 +86,6 @@ odometryNoise::odometryNoise(double sampleTime, const Yaml::Node &cfg)
   orient_std_ = cfg["orient_std"].template As<float>();
   lin_vel_std_ = cfg["lin_vel_std"].template As<float>();
   ang_vel_std_ = cfg["ang_vel_std"].template As<float>();
-  //    std::cout << "pos_std_ noise: " << pos_std_ << std::endl;
-  //    std::cout << "orient_std_ noise: " << orient_std_ << std::endl;
-  //    std::cout << "lin_vel_std_ noise: " << lin_vel_std_ << std::endl;
-  //    std::cout << "ang_vel_std_ noise: " << ang_vel_std_ << std::endl;
 }
 
 Eigen::VectorXd odometryNoise::getNoise() {
@@ -180,14 +176,6 @@ void odometry::update() {
   measureGT_ << point_W.e(), orient_W.e(), velocity_B.e(),
       angularVelocity_B.e();
 
-  //  std::cout << "pos w sensor: " << point_W.e() << std::endl;
-  //    std::cout << "orient mat sensor: " << orientMatWB << std::endl;
-  //    std::cout << "orient quat sensor raisim: " << orient_W << std::endl;
-  //    std::cout << "orient quat sensor eigen: " << orient_W.e() << std::endl;
-  //    std::cout << "vel B sensor " << velocity_B.e() << std::endl;
-  //    std::cout << "angular vel B sensor " << angularVelocity_B.e() <<
-  //    std::endl;
-
   if (noiseSource_ != NULL) {
     Eigen::VectorXd noise = noiseSource_->getNoise();
     Eigen::Quaterniond orient_W_quat(orient_W[0], orient_W[1], orient_W[2],
@@ -202,12 +190,6 @@ void odometry::update() {
     measure_ << point_W_noisy, orient_W_quat_noisy.w(), orient_W_quat_noisy.x(),
         orient_W_quat_noisy.y(), orient_W_quat_noisy.z(), velocity_B_noisy,
         angularVelocity_B_noisy;
-    //    std::cout << "point_W_noisy: " << point_W_noisy << std::endl;
-    //      std::cout << "orient noise quat sensor coeffs: " <<
-    //      orient_noise_quat.coeffs() << std::endl; std::cout << "orient W quat
-    //      noisy sensor coeffs: " << orient_W_quat_noisy.coeffs() << std::endl;
-
-    //      measure_ = measureGT_ + noiseSource_->getNoise();
   } else {
     measure_ = measureGT_;
   }

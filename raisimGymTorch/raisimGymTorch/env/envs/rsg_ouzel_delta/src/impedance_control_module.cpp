@@ -38,11 +38,6 @@ void ImpedanceControlModule::calculateWrenchCommand(
   computeStateError(&position_error_B, &velocity_error_B, &attitude_error_B,
                     &rate_error_B);
 
-  //  std::cout << "position error B: " << position_error_B.norm() << std::endl;
-  //  std::cout << "attitude error B: " << attitude_error_B.norm() << std::endl;
-  //  std::cout << "lin vel error B: " << velocity_error_B.norm() << std::endl;
-  //  std::cout << "rate error B: " << rate_error_B.norm() << std::endl;
-
   // unused tool_error variables
   //      Eigen::Vector3d tool_position_error_B, tool_velocity_error_B;
   //      computeToolError(&tool_position_error_B, &tool_velocity_error_B);
@@ -67,11 +62,6 @@ void ImpedanceControlModule::calculateWrenchCommand(
       impedance_ctrl_ang_B;
   computePIDerror(&linear_error_B, &angular_error_B, position_error_limited_B,
                   velocity_error_B, attitude_error_B, rate_error_B);
-  //  if (!Eigen::isfinite(linear_error_B.array()).all() ||
-  //      !Eigen::isfinite(angular_error_B.array()).all()) {
-  //    std::cout << "not finite betwwen compute pid and add feedfwd acc"
-  //              << std::endl;
-  //  }
   addFeedFwdAccel(&linear_error_B, &angular_error_B);
 
   // compute external wrench
@@ -154,25 +144,6 @@ void ImpedanceControlModule::calculateWrenchCommand(
 
   (*wrench_command).thrust = mass_ * commandFilter_->getForce();
   (*wrench_command).torque = inertia_ * commandFilter_->getTorque();
-  //  if (!Eigen::isfinite((*wrench_command).thrust.array()).all() ||
-  //      !Eigen::isfinite((*wrench_command).torque.array()).all()) {
-  //    std::cout << "wrench_command.thrust: " << (*wrench_command).thrust
-  //              << std::endl;
-  //    std::cout << "wrench_command.torque: " << (*wrench_command).torque
-  //              << std::endl;
-  //    std::cout << "linear_accel_B_des: " << linear_accel_B_des << std::endl;
-  //    std::cout << "angular_accel_B_des: " << angular_accel_B_des <<
-  //    std::endl; std::cout << "impedance_ctrl_lin_B: " << impedance_ctrl_lin_B
-  //    << std::endl; std::cout << "impedance_ctrl_ang_B: " <<
-  //    impedance_ctrl_ang_B << std::endl; std::cout << "linear_error_B: " <<
-  //    linear_error_B << std::endl; std::cout << "angular_error_B: " <<
-  //    angular_error_B << std::endl; std::cout << "position_error_B: " <<
-  //    position_error_B << std::endl; std::cout << "velocity_error_B: " <<
-  //    velocity_error_B << std::endl; std::cout << "attitude_error_B: " <<
-  //    attitude_error_B << std::endl; std::cout << "rate_error_B: " <<
-  //    rate_error_B << std::endl; std::cout << "n_coriolis: " << n_coriolis <<
-  //    std::endl;
-  //  }
 }
 
 void ImpedanceControlModule::computeForceControlCommand(
@@ -194,11 +165,6 @@ void ImpedanceControlModule::computeForceControlCommand(
 }
 
 void ImpedanceControlModule::setControllerParameters(const Yaml::Node &cfg) {
-  // general config
-  //      std::cout << cfg["use_ext_wrench"].template As<int>() << std::endl;
-  //      std::cout << cfg["x_gain"].template As<float>() << std::endl;
-  //      std::cout << cfg["use_force_control"].template As<bool>() <<
-  //      std::endl;
   control_params_.use_ext_wrench =
       int(cfg["use_external_wrench"].template As<float>());
 
@@ -298,8 +264,6 @@ void ImpedanceControlModule::computeStateError(
   Eigen::Matrix3d attitude_error_matrix =
       0.5 * (R_W_B_des.transpose() * R_W_B - R_W_B.transpose() * R_W_B_des);
   Eigen::Vector3d att_error_B;
-  //      std::cout << "rwb des:\n" << R_W_B_des << std::endl;
-  //      std::cout << "rwb:\n" << R_W_B << std::endl;
   mav_msgs::vectorFromSkewMatrix(attitude_error_matrix, &att_error_B);
   *attitude_error_B = att_error_B;
   *rate_error_B = odom_.angular_velocity_B -
@@ -529,13 +493,9 @@ void ImpedanceControlModule::adaptRefFromAction(
   ref_.orientation_W_B = ref_quaternion_ouzel_W;
   ref_.orientation_W_B = ref_.orientation_W_B * _ouzel_orientation_corr_quat;
   ref_.orientation_W_B.normalize();
-  //      ref_.orientation_W_B = _orientation_corr;
   if (!Eigen::isfinite(ref_.orientation_W_B.toRotationMatrix().array()).any()) {
     std::cout << "ref orientation is nan!!" << std::endl;
   }
-  //      std::cout << "corrected ref pos impedance ctrl: " << ref_.position_W
-  //      << std::endl; std::cout << "corrected ref orient impedance ctrl
-  //      coeffs: " << ref_.orientation_W_B.coeffs() << std::endl;
 }
 
 void ImpedanceControlModule::setRef(
@@ -546,8 +506,6 @@ void ImpedanceControlModule::setRef(
 
   ref_.position_W = ref_position_delta_W;
   ref_.orientation_W_B = ref_quaternion_ouzel_W;
-  //      ref_.position_W = Eigen::Vector3d::Zero();
-  //      ref_.orientation_W_B = Eigen::Quaterniond::Identity();
 }
 
 } // namespace rw_omav_controllers
