@@ -297,9 +297,6 @@ public:
                     float(ref_ouzel_orientation_corr_angle_axis.angle()));
     rewards_.record("deltaJointAngles",
                     float(ref_delta_joint_pos.squaredNorm()));
-    //                    float(std::abs(ref_delta_joint_pos(0)) +
-    //                          std::abs(ref_delta_joint_pos(1)) +
-    //                          std::abs(ref_delta_joint_pos(2))));
     rewards_.record("deltaJointAnglesDiff",
                     float(ref_delta_joint_pos_diff.squaredNorm()));
     rewards_.record(
@@ -318,14 +315,8 @@ public:
       delta_ee_ref_marker_->setPosition(ref_delta_position_(0),
                                         ref_delta_position_(1),
                                         ref_delta_position_(2));
-      //      Eigen::Vector4d quat(
-      //          ref_ouzel_orientation_.w(), ref_ouzel_orientation_.x(),
-      //          ref_ouzel_orientation_.y(), ref_ouzel_orientation_.z());
-      //      delta_ee_ref_marker_->setOrientation(quat);
     }
     controller_.setRef(ref_delta_position_, ref_ouzel_orientation_);
-    //    std::cout << "ref_delta_position_: " << ref_delta_position_ <<
-    //    std::endl;
   }
 
   void updateObservation() {
