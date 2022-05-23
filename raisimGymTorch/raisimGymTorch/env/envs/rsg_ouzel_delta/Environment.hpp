@@ -48,11 +48,6 @@ public:
     gc_init_.setZero(gcDim_);
     gv_.setZero(gvDim_);
     gv_init_.setZero(gvDim_);
-    max_sinus_amplitude_ = cfg["sinus_max_amplitude"].template As<float>();
-    max_lateral_speed_ = cfg["max_lateral_speed"].template As<float>();
-    max_sinus_wavelength_ = cfg["sinus_max_wavelength"].template As<float>();
-    ref_sampling_time_ = cfg["ref_sampling_time"].template As<float>();
-    sinus_traj_share_ = cfg["sinus_traj_share"].template As<float>();
 
     control_dt_ = cfg["control_dt"].template As<float>();
     simulation_dt_ = cfg["simulation_dt"].template As<float>();
@@ -83,6 +78,15 @@ public:
     initialAngularVel_ =
         cfg["initialisation"]["angularVelDeg"].template As<float>() / 180.0 *
         M_PI;
+    /// Sinus trajectory params
+    min_sinus_amplitude_ = cfg["sinus_min_amplitude"].template As<float>();
+    max_sinus_amplitude_ = cfg["sinus_max_amplitude"].template As<float>();
+    min_lateral_speed_ = cfg["min_lateral_speed"].template As<float>();
+    max_lateral_speed_ = cfg["max_lateral_speed"].template As<float>();
+    min_sinus_wavelength_ = cfg["sinus_min_wavelength"].template As<float>();
+    max_sinus_wavelength_ = cfg["sinus_max_wavelength"].template As<float>();
+    ref_sampling_time_ = cfg["ref_sampling_time"].template As<float>();
+    sinus_traj_share_ = cfg["sinus_traj_share"].template As<float>();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
     obDim_ = 39;
@@ -282,7 +286,7 @@ public:
     }
     ref_delta_joint_pos_previous_ = ref_delta_joint_pos_diff;
 
-    // get rewards
+    /// compute rewards
     double waypoint_dist_delta, error_angle;
     computeErrorMetrics(waypoint_dist_delta, error_angle);
     Eigen::AngleAxisd ref_ouzel_orientation_corr_angle_axis(
@@ -487,16 +491,17 @@ private:
           all_oscillation_dir[linear_dir_ + 1 + int(oscillation_dir_proxy) -
                               int(!oscillation_dir_proxy)];
 
-      sinus_amplitude_ =
-          std::abs(unifDistPlusMinusOne_(gen_)) * max_sinus_amplitude_;
-      lateral_speed_ =
-          std::abs(unifDistPlusMinusOne_(gen_)) * max_lateral_speed_;
+      sinus_amplitude_ = std::abs(unifDistPlusMinusOne_(gen_)) *
+                             (max_sinus_amplitude_ - min_sinus_amplitude_) +
+                         min_sinus_amplitude_;
+      lateral_speed_ = std::abs(unifDistPlusMinusOne_(gen_)) *
+                           (max_lateral_speed_ - min_lateral_speed_) +
+                       min_lateral_speed_;
       double sinus_wavelength =
-          std::abs(unifDistPlusMinusOne_(gen_)) * max_sinus_wavelength_;
-      sinus_offset_ = 0.0;
-      bool lateral_direction_proxy = std::signbit(unifDistPlusMinusOne_(gen_));
-      lateral_direction_ =
-          int(lateral_direction_proxy) - int(!lateral_direction_proxy);
+          std::abs(unifDistPlusMinusOne_(gen_)) *
+              (max_sinus_wavelength_ - min_sinus_wavelength_) +
+          min_sinus_wavelength_;
+      sinus_offset_ = unifDistPlusMinusOne_(gen_) * M_PI;
       sinus_angular_freq_ = 2 * M_PI * lateral_speed_ / sinus_wavelength;
       step_count_ = 0;
 
@@ -618,15 +623,15 @@ private:
   int oscillation_dir_;
 
   double sinus_amplitude_;
-  double sinus_wave_number_;
   double lateral_speed_;
   double sinus_angular_freq_;
   double sinus_offset_;
-  int lateral_direction_;
+  double min_sinus_amplitude_;
   double max_sinus_amplitude_;
+  double min_lateral_speed_;
   double max_lateral_speed_;
+  double min_sinus_wavelength_;
   double max_sinus_wavelength_;
-  int update_ref_point_all_n_step_;
   float ref_sampling_time_;
   int step_count_;
   double sinus_traj_share_;

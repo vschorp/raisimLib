@@ -1,4 +1,4 @@
-# basic config file
+# config 4
 seed: 1
 record_video: yes
 activation: tanh
@@ -14,34 +14,42 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
+  sinus_traj_share: 0.7
+  sinus_min_amplitude: 0.05
+  sinus_max_amplitude: 0.3
+  sinus_min_wavelength: 0.1
+  sinus_max_wavelength: 1.0
+  min_lateral_speed: 0.0
+  max_lateral_speed: 0.5
+  ref_sampling_time: 0.01
   reward:
     waypointDist:
       coeff: -1.0
     orientError:
       coeff: -1.0
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e0
+      coeff: -1.0e-1
     deltaOuzelRefPositionOffsetDiff:
-      coeff: -1.0e0
+      coeff: -5.0e-1
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
-      coeff: -1.0e-2
+      coeff: -1.0e-4
     deltaJointAnglesDiff:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
     deltaJointAnglesClamp:
-      coeff: -1.0e1
+      coeff: -1.0e-1
   termination:
     oob:
       reward: -1000.0
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 100.0
+      reward: 0.0
       waypointDist: 0.05
       angleErrorDeg: 5.0
       linearVel: 0.02
-      angularVelDeg: 1.0
+      angularVelDeg: 2.0
       minTime: 1.0
   initialisation:
     distanceOffset: 1.5
