@@ -130,7 +130,7 @@ ENDFOREACH ()
 #######################
 ### src and linking of delta ###
 #######################
-set(SUBDIRS rsg_ouzel_delta rsg_ouzel_delta_sinus)
+set(SUBDIRS rsg_ouzel_delta)
 #set(SUBDIRS rsg_ouzel_delta rsg_ouzel)
 #SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)
 set(RAISIMGYM_ENV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/raisimGymTorch/env/envs)

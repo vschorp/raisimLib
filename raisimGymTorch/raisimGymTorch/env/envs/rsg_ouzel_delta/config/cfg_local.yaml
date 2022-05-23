@@ -13,6 +13,11 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
+  sinus_traj_share: 0.0
+  sinus_max_amplitude: 0.3
+  sinus_max_wavelength: 1.0
+  max_lateral_speed: 0.5
+  ref_sampling_time: 0.01
   reward:
     waypointDist:
       coeff: -1.0
@@ -29,7 +34,7 @@ environment:
     deltaJointAnglesDiff:
       coeff: -1.0e-1
     deltaJointAnglesClamp:
-      coeff: -1.0e1
+      coeff: -1.0e0
   termination:
     oob:
       reward: -1000.0
