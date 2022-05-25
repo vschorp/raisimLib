@@ -2,15 +2,15 @@
 seed: 1
 record_video: yes
 activation: tanh
-on_cluster: True
+on_cluster: False
 learning_rate: 5e-4
 use_adaptive_lr: False
 
 environment:
-  render: False
-  num_envs: 52 #26
-  eval_every_n: 1000 #200
-  num_threads: 60 #30
+  render: True
+  num_envs: 1 #26
+  eval_every_n: 100 #200
+  num_threads: 1 #30
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
