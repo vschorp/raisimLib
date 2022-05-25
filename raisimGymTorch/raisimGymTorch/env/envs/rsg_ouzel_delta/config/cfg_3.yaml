@@ -28,16 +28,14 @@ environment:
     orientError:
       coeff: -1.0
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e-1
+      coeff: -1.0e0
     deltaOuzelRefPositionOffsetDiff:
-      coeff: -5.0e-1
+      coeff: -1.0e0
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
-      coeff: -1.0e-4
-    deltaJointAnglesDiff:
-      coeff: -1.0e-2
-    deltaJointAnglesClamp:
+      coeff: -5.0e-2
+    deltaJointAngularVel:
       coeff: -1.0e-1
   termination:
     oob:
@@ -49,7 +47,7 @@ environment:
       waypointDist: 0.05
       angleErrorDeg: 5.0
       linearVel: 0.02
-      angularVelDeg: 2.0
+      angularVelDeg: 1.0
       minTime: 1.0
   initialisation:
     distanceOffset: 1.5
