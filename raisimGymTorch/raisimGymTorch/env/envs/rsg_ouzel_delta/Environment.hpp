@@ -316,6 +316,8 @@ public:
     rewards_.record(
         "deltaJointAngles",
         float((ref_delta_joint_pos - delta_joint_angles_neutral_).norm()));
+    rewards_.record("deltaJointAnglesRaw",
+                    float(ref_delta_joint_pos_raw.squaredNorm()));
     rewards_.record("deltaJointAngularVel",
                     float(delta_joint_angular_vel_.norm()));
     return rewards_.sum();

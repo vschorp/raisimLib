@@ -14,7 +14,7 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
-  sinus_traj_share: 0.5
+  sinus_traj_share: 0.0
   sinus_min_amplitude: 0.05
   sinus_max_amplitude: 0.3
   sinus_min_wavelength: 0.1
@@ -35,8 +35,10 @@ environment:
       coeff: -1.0e-2
     deltaJointAngles:
       coeff: 0.0
+    deltaJointAnglesRaw:
+      coeff: -1.0e-2
     deltaJointAngularVel:
-      coeff: -1.0e-1
+      coeff: -1.0e-2
   termination:
     oob:
       reward: -1000.0

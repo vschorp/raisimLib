@@ -113,7 +113,7 @@ class EvaluationVisualizer:
         self.action_lin_corr_all[step, :] = lin_corr
         self.action_orient_corr_all[step, :] = action_orient_corr_mat.as_quat()
         if self.is_delta:
-            self.action_delta_angles_all[step, :] = delta_angles
+            self.action_delta_angles_all[step, :] = (np.tanh(delta_angles) + 1) / 2.0 * 1.4
 
     def visualize(self):
         if self.is_delta:

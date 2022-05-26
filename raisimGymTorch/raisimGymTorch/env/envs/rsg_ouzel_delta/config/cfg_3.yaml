@@ -34,7 +34,9 @@ environment:
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
-      coeff: -5.0e-2
+      coeff: -1.0e-2
+    deltaJointAnglesRaw:
+      coeff: 0.0
     deltaJointAngularVel:
       coeff: -1.0e-1
   termination:

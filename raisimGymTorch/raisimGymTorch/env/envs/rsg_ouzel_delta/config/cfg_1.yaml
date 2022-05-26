@@ -35,8 +35,10 @@ environment:
       coeff: -1.0e-2
     deltaJointAngles:
       coeff: 0.0
-    deltaJointAngularVel:
+    deltaJointAnglesRaw:
       coeff: -1.0e-1
+    deltaJointAngularVel:
+      coeff: -1.0e-2
   termination:
     oob:
       reward: -1000.0
