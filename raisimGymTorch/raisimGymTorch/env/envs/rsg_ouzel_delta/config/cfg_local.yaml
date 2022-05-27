@@ -14,7 +14,7 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
-  sinus_traj_share: 0.0
+  sinus_traj_share: 1.0
   sinus_min_amplitude: 0.05
   sinus_max_amplitude: 0.3
   sinus_min_wavelength: 0.1
