@@ -97,6 +97,12 @@ public:
     ouzel_angular_vel_B_.setZero();
     delta_ouzel_ref_position_offset_neutral_B << 0.0, 0.0, 0.4;
     delta_joint_angles_neutral_ << 0.7, 0.7, 0.7;
+    double mass =
+        cfg["controller"]["vehicle_params"]["mass"].template As<float>();
+    double gravity =
+        cfg["controller"]["vehicle_params"]["gravity"].template As<float>();
+    gravity_compensation_thrust_W_ << 0.0, 0.0, mass * gravity;
+
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile(cfg["reward"]);
     terminalOOBRewardCoeff_ =
@@ -164,6 +170,7 @@ public:
   }
 
   float step(const Eigen::Ref<EigenVec> &action) final {
+    Eigen::Quaterniond controller_orient_W_B = ouzel_orientation_W_B_;
     controller_.setOdom(ouzel_position_W_, ouzel_orientation_W_B_,
                         ouzel_linear_vel_B_, ouzel_angular_vel_B_);
 
@@ -305,6 +312,13 @@ public:
         ref_ouzel_orientation_corr);
     rewards_.record("waypointDist", float(waypoint_dist_delta));
     rewards_.record("orientError", float(error_angle));
+    rewards_.record("commandThrust",
+                    float((controller_orient_W_B.toRotationMatrix() *
+                               wrench_command.thrust -
+                           gravity_compensation_thrust_W_)
+                              .squaredNorm()));
+    rewards_.record("commandTorque",
+                    float(wrench_command.torque.squaredNorm()));
     rewards_.record("deltaOuzelRefPositionOffset",
                     float((delta_ouzel_ref_position_offset_W -
                            delta_ouzel_ref_position_offset_neutral_W)
@@ -610,6 +624,7 @@ private:
   Eigen::Quaterniond ref_ouzel_orientation_;
   Eigen::Vector3d delta_ouzel_ref_position_offset_previous_;
   Eigen::Vector3d ref_delta_joint_pos_previous_;
+  Eigen::Vector3d gravity_compensation_thrust_W_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 

@@ -27,10 +27,14 @@ environment:
       coeff: -1.0
     orientError:
       coeff: -1.0
+    commandThrust:
+      coeff: -1.0e-2
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e0
+      coeff: 0.0
     deltaOuzelRefPositionOffsetDiff:
-      coeff: -1.0e0
+      coeff: 0.0
+    commandTorque:
+      coeff: 0.0
     orientRefCorr:
       coeff: -1.0e-2
     deltaJointAngles:
