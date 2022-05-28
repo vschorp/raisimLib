@@ -14,7 +14,7 @@ environment:
   simulation_dt: 0.0025
   control_dt: 0.005
   max_time: 4.0
-  sinus_traj_share: 0.75
+  sinus_traj_share: 0.5
   sinus_min_amplitude: 0.05
   sinus_max_amplitude: 0.3
   sinus_min_wavelength: 0.1
@@ -30,9 +30,9 @@ environment:
     commandThrust:
       coeff: 0.0
     deltaOuzelRefPositionOffset:
-      coeff: -1.0e0
+      coeff: -5.0e-1
     deltaOuzelRefPositionOffsetDiff:
-      coeff: -1.0e0
+      coeff: -5.0e-1
     commandTorque:
       coeff: 0.0
     orientRefCorr:
@@ -40,7 +40,7 @@ environment:
     deltaJointAngles:
       coeff: 0.0
     deltaJointAnglesRaw:
-      coeff: -1.0e-1
+      coeff: -5.0e-2
     deltaJointAngularVel:
       coeff: -1.0e-2
   termination:
@@ -49,11 +49,11 @@ environment:
       waypointDist: 5.0
       angleErrorDeg: 60.0
     success:
-      reward: 0.0
-      waypointDist: 0.05
-      angleErrorDeg: 5.0
-      linearVel: 0.02
-      angularVelDeg: 1.0
+      reward: 100.0
+      waypointDist: 0.1
+      angleErrorDeg: 10.0
+      linearVel: 100.0
+      angularVelDeg: 100.0
       minTime: 1.0
   initialisation:
     distanceOffset: 1.5
