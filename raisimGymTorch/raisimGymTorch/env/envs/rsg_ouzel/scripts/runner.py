@@ -14,6 +14,12 @@ import torch
 import datetime
 import argparse
 
+# This script trains the policy
+#
+# run example: $ python runner.py --config cfg_local.yaml
+#
+# use cfg_local to train on a local computer and cfg_1 to train on euler.
+
 print("started runner.py script")
 
 # task specification

@@ -9,6 +9,9 @@ import time
 import torch
 import argparse
 
+# This script tests a given policy.
+# run example: $ python tester.py --weight /home/{user}/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_only_planning/2022-05-09-12-17-53/full_123000.pt --config cfg_local.yaml
+# use cfg_local to run it on a local computer.
 
 # configuration
 parser = argparse.ArgumentParser()

@@ -349,7 +349,6 @@ private:
 
   raisim_sensors::odometry odometry_;
 
-  //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
   std::uniform_real_distribution<double> unifDistPlusMinusOne_;
 };
