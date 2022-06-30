@@ -10,7 +10,7 @@
 #include <set>
 #include <stdlib.h>
 
-#include "../../RaisimGymEnv.hpp"
+#include "RaisimGymEnv.hpp"
 #include "include/impedance_control_module.h"
 #include "include/sensors.h"
 
@@ -61,16 +61,10 @@ public:
     /// MUST BE DONE FOR ALL ENVIRONMENTS
     obDim_ = 27;
     actionDim_ = 9;
-    actionMean_.setZero(actionDim_);
-    actionStd_.setZero(actionDim_);
     position_W_.setZero();
     orientation_W_B_.setIdentity();
     bodyLinearVel_.setZero();
     bodyAngularVel_.setZero();
-
-    /// action scaling
-    actionMean_ = gc_init_.tail(actionDim_);
-    actionStd_.setConstant(0.3);
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile(cfg["reward"]);
@@ -343,7 +337,6 @@ private:
   double terminalSuccessAngleError_;
   double terminalSuccessLinearVel_;
   double terminalSuccessAngularVel_;
-  Eigen::VectorXd actionMean_, actionStd_;
   Eigen::Vector3d position_W_, bodyLinearVel_, bodyAngularVel_;
   Eigen::Quaterniond orientation_W_B_;
   Eigen::Vector3d position_W_gt_, bodyLinearVel_gt_, bodyAngularVel_gt_;
@@ -356,7 +349,6 @@ private:
 
   raisim_sensors::odometry odometry_;
 
-  //  std::normal_distribution<double> normDist_;
   thread_local static std::mt19937 gen_;
   std::uniform_real_distribution<double> unifDistPlusMinusOne_;
 };

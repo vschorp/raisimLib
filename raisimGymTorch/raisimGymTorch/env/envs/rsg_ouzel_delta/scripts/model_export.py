@@ -9,6 +9,11 @@ import torch
 import argparse
 import numpy as np
 
+# This script takes a trained policy as input and transforms it so that the network can be used with the
+# pyTorch C++ implementation.
+#
+# run example: $ python model_export.py --weight /home/{user}/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_delta_planning/2022-05-27-14-33-19/full_41000.pt --config cfg_1.yaml
+
 
 # configuration
 parser = argparse.ArgumentParser()
@@ -35,6 +40,7 @@ env.seed(seed)
 
 # shortcuts
 ob_dim = env.num_obs
+policy_input_dim = ob_dim - 3
 act_dim = env.num_acts
 
 weight_path = args.weight
@@ -61,10 +67,10 @@ else:
     start_step_id = 0
 
     print("loading model: ", weight_path)
-    loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, ob_dim, act_dim)
+    loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, policy_input_dim, act_dim)
     loaded_graph.load_state_dict(torch.load(weight_path)["actor_architecture_state_dict"])
 
-    example_input = torch.rand(1, ob_dim)
+    example_input = torch.rand(1, policy_input_dim)
     traced_script_module = torch.jit.trace(loaded_graph.architecture, example_input)
     output_fname = os.path.join(weight_dir, "trained_model.pt")
     traced_script_module.save(output_fname)

@@ -14,6 +14,12 @@ import torch
 import datetime
 import argparse
 
+# This script trains the policy
+#
+# run example: $ python runner.py --config cfg_local.yaml
+#
+# use cfg_local to train on a local computer and cfg_1 to train on euler.
+
 print("started runner.py script")
 
 # task specification
@@ -47,6 +53,7 @@ env = VecEnv(RaisimGymEnv(home_path + "/rsc", dump(cfg["environment"], Dumper=Ro
 
 # shortcuts
 ob_dim = env.num_obs
+policy_input_dim = ob_dim - 3
 act_dim = env.num_acts
 num_threads = cfg["environment"]["num_threads"]
 
@@ -63,11 +70,11 @@ else:
     print("Error ! No valid activation given in cfg file")
 
 actor = ppo_module.Actor(
-    ppo_module.MLP(cfg["architecture"]["policy_net"], activation, ob_dim, act_dim),
+    ppo_module.MLP(cfg["architecture"]["policy_net"], activation, policy_input_dim, act_dim),
     ppo_module.MultivariateGaussianDiagonalCovariance(act_dim, env.num_envs, 1.0, NormalSampler(act_dim), cfg["seed"]),
     device,
 )
-critic = ppo_module.Critic(ppo_module.MLP(cfg["architecture"]["value_net"], activation, ob_dim, 1), device)
+critic = ppo_module.Critic(ppo_module.MLP(cfg["architecture"]["value_net"], activation, policy_input_dim, 1), device)
 
 saver = ConfigurationSaver(
     log_dir=home_path + "/raisimGymTorch/data/" + task_name, save_items=[config_fpath, task_path + "/Environment.hpp"]
@@ -115,7 +122,7 @@ for update in range(1000000):
             saver.data_dir + "/full_" + str(update) + ".pt",
         )
         # we create another graph just to demonstrate the save/load method
-        loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, ob_dim, act_dim)
+        loaded_graph = ppo_module.MLP(cfg["architecture"]["policy_net"], activation, policy_input_dim, act_dim)
         loaded_graph.load_state_dict(
             torch.load(saver.data_dir + "/full_" + str(update) + ".pt")["actor_architecture_state_dict"]
         )
@@ -130,7 +137,8 @@ for update in range(1000000):
             with torch.no_grad():
                 frame_start = time.time()
                 obs = env.observe(False)
-                action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())
+                policy_obs = obs[:, :-3]
+                action_ll = loaded_graph.architecture(torch.from_numpy(policy_obs).cpu())
                 reward_ll, dones = env.step(action_ll.cpu().detach().numpy())
                 frame_end = time.time()
                 wait_time = cfg["environment"]["control_dt"] - (frame_end - frame_start)
@@ -147,15 +155,17 @@ for update in range(1000000):
     # actual training
     for step in range(n_steps):
         obs = env.observe()
-        action = ppo.act(obs)
+        policy_obs = obs[:, :-3]
+        action = ppo.act(policy_obs)
         reward, dones = env.step(action)
-        ppo.step(value_obs=obs, rews=reward, dones=dones)
+        ppo.step(value_obs=policy_obs, rews=reward, dones=dones)
         done_sum = done_sum + np.sum(dones)
         reward_ll_sum = reward_ll_sum + np.sum(reward)
 
     # take st step to get value obs
     obs = env.observe()
-    ppo.update(actor_obs=obs, value_obs=obs, log_this_iteration=update % 10 == 0, update=update)
+    policy_obs = obs[:, :-3]
+    ppo.update(actor_obs=policy_obs, value_obs=policy_obs, log_this_iteration=update % 10 == 0, update=update)
     average_ll_performance = reward_ll_sum / total_steps
     average_dones = done_sum / total_steps
     avg_rewards.append(average_ll_performance)

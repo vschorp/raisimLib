@@ -55,12 +55,6 @@ public:
     /// initialize delta
     delta_sym_ =
         new delta_dynamics::DeltaController(cfg_["deltaArm"], control_dt_);
-    if (render_) {
-      delta_eef_ = world_->addCylinder(0.05, 0.008, 0.01, "default",
-                                       raisim::COLLISION(15));
-      delta_eef_->setPosition(2, 2, 2);
-      delta_eef_->setBodyType(raisim::BodyType::STATIC);
-    }
     ee_vel_prev_ = Eigen::Vector3d::Zero();
     B_om_WB_prev_ = Eigen::Vector3d::Zero();
     pos_offset_BD_ =
@@ -84,16 +78,30 @@ public:
     initialAngularVel_ =
         cfg["initialisation"]["angularVelDeg"].template As<float>() / 180.0 *
         M_PI;
-
-    resetInitialConditions();
+    /// Sinus trajectory params
+    min_sinus_amplitude_ = cfg["sinus_min_amplitude"].template As<float>();
+    max_sinus_amplitude_ = cfg["sinus_max_amplitude"].template As<float>();
+    min_lateral_speed_ = cfg["min_lateral_speed"].template As<float>();
+    max_lateral_speed_ = cfg["max_lateral_speed"].template As<float>();
+    min_sinus_wavelength_ = cfg["sinus_min_wavelength"].template As<float>();
+    max_sinus_wavelength_ = cfg["sinus_max_wavelength"].template As<float>();
+    ref_sampling_time_ = cfg["ref_sampling_time"].template As<float>();
+    sinus_traj_share_ = cfg["sinus_traj_share"].template As<float>();
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 36;
+    obDim_ = 39;
     actionDim_ = 12;
     ouzel_position_W_.setZero();
     ouzel_orientation_W_B_.setIdentity();
     ouzel_linear_vel_B_.setZero();
     ouzel_angular_vel_B_.setZero();
+    delta_ouzel_ref_position_offset_neutral_B << 0.0, 0.0, 0.4;
+    delta_joint_angles_neutral_ << 0.7, 0.7, 0.7;
+    double mass =
+        cfg["controller"]["vehicle_params"]["mass"].template As<float>();
+    double gravity =
+        cfg["controller"]["vehicle_params"]["gravity"].template As<float>();
+    gravity_compensation_thrust_W_ << 0.0, 0.0, mass * gravity;
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile(cfg["reward"]);
@@ -134,12 +142,27 @@ public:
       server_ = std::make_unique<raisim::RaisimServer>(world_.get());
       server_->launchServer();
       server_->focusOn(ouzel_);
+      if (render_) {
+        delta_eef_ =
+            server_->addVisualCylinder("delta_eef", 0.1, 0.008, 0.0, 0.0, 1.0);
+        delta_eef_->setPosition(0, 0, 0);
+        omav_ref_marker_ =
+            server_->addVisualCylinder("omav_ref", 0.2, 0.008, 1.0, 0.0, 0.0);
+        omav_ref_marker_->setPosition(0, 0, 0);
+        delta_ee_ref_marker_ = server_->addVisualCylinder("delta_ee_ref", 0.15,
+                                                          0.008, 0.0, 1.0, 0.0);
+        delta_ee_ref_marker_->setPosition(0, 0, 0);
+      }
     }
+
+    is_sinus_traj_ = std::abs(unifDistPlusMinusOne_(gen_)) < sinus_traj_share_;
+    resetInitialConditions();
   }
 
   void init() final {}
 
   void reset() final {
+    is_sinus_traj_ = std::abs(unifDistPlusMinusOne_(gen_)) < sinus_traj_share_;
     resetInitialConditions();
     ouzel_->setState(gc_init_, gv_init_);
     time_in_success_state_ = 0.0;
@@ -147,28 +170,37 @@ public:
   }
 
   float step(const Eigen::Ref<EigenVec> &action) final {
+    Eigen::Quaterniond controller_orient_W_B = ouzel_orientation_W_B_;
     controller_.setOdom(ouzel_position_W_, ouzel_orientation_W_B_,
                         ouzel_linear_vel_B_, ouzel_angular_vel_B_);
 
     auto actionD = action.cast<double>();
-    Eigen::Vector3d delta_ouzel_ref_position_offset = actionD.segment(0, 3);
+    Eigen::Vector3d delta_ouzel_ref_position_offset_W = actionD.segment(0, 3);
     Eigen::Quaterniond ref_ouzel_orientation_corr =
         QuaternionFromTwoVectors(actionD.segment(3, 3), actionD.segment(6, 3));
-    controller_.adaptRefFromAction(delta_ouzel_ref_position_offset,
+    controller_.adaptRefFromAction(delta_ouzel_ref_position_offset_W,
                                    ref_ouzel_orientation_corr);
+
+    if (visualizable_ && render_) {
+      Eigen::Vector3d pos =
+          ref_delta_position_ + delta_ouzel_ref_position_offset_W;
+      omav_ref_marker_->setPosition(pos(0), pos(1), pos(2));
+      Eigen::Quaterniond eigen_quat =
+          ref_ouzel_orientation_ * ref_ouzel_orientation_corr;
+      eigen_quat.normalize();
+      Eigen::Vector4d quat(eigen_quat.w(), eigen_quat.x(), eigen_quat.y(),
+                           eigen_quat.z());
+      omav_ref_marker_->setOrientation(quat);
+    }
 
     mav_msgs::EigenTorqueThrust wrench_command;
     controller_.calculateWrenchCommand(&wrench_command, control_dt_);
 
     // delta arm
-    Eigen::Vector3d ref_delta_joint_pos(actionD.tail(3));
-    Eigen::Vector3d ref_delta_joint_pos_clamped;
-    ref_delta_joint_pos_clamped(0) = boost::algorithm::clamp(
-        ref_delta_joint_pos(0), delta_min_joint_angle_, delta_max_joint_angle_);
-    ref_delta_joint_pos_clamped(1) = boost::algorithm::clamp(
-        ref_delta_joint_pos(1), delta_min_joint_angle_, delta_max_joint_angle_);
-    ref_delta_joint_pos_clamped(2) = boost::algorithm::clamp(
-        ref_delta_joint_pos(2), delta_min_joint_angle_, delta_max_joint_angle_);
+    Eigen::Vector3d ref_delta_joint_pos_raw(actionD.tail(3));
+    Eigen::Vector3d ref_delta_joint_pos =
+        (Eigen::tanh(ref_delta_joint_pos_raw.array()) + 1.0) / 2.0 *
+        delta_max_joint_angle_;
     Eigen::VectorXd odometry_measurement_gt;
     Eigen::Vector3d force_B, torque_B;
     Eigen::Vector3d ee_pos, ee_vel, ee_acc, eef_pos_W;
@@ -192,7 +224,7 @@ public:
       ouzel_->setExternalTorqueInBodyFrame(baseLink_, wrench_command.torque);
 
       /// delta arm simulation
-      delta_sym_->sendActuatorsCommand(ref_delta_joint_pos_clamped);
+      delta_sym_->sendActuatorsCommand(ref_delta_joint_pos);
 
       delta_sym_->fwkinPosition(&ee_pos);
       delta_sym_->fwkinVel(&ee_vel, ee_pos);
@@ -214,12 +246,15 @@ public:
                                ouzel_->WORLD_FRAME, ouzel_->getCOM());
       ouzel_->setExternalTorqueInBodyFrame(baseLink_, torque_B);
 
-      if (render_) {
+      if (visualizable_ && render_) {
         eef_pos_W = ouzel_position_W_gt_ + pos_offset_BD_ +
                     ouzel_orientation_W_B_gt_.matrix() *
                         ang_offset_BD_.matrix() * ee_pos;
         delta_eef_->setPosition(eef_pos_W(0), eef_pos_W(1), eef_pos_W(2));
-        delta_eef_->setOrientation(ouzel_orientation_W_B_gt_);
+        Eigen::Vector4d quat(
+            ouzel_orientation_W_B_gt_.w(), ouzel_orientation_W_B_gt_.x(),
+            ouzel_orientation_W_B_gt_.y(), ouzel_orientation_W_B_gt_.z());
+        delta_eef_->setOrientation(quat);
       }
 
       if (server_)
@@ -229,6 +264,11 @@ public:
         server_->unlockVisualizationServerMutex();
     }
 
+    if (is_sinus_traj_) {
+      step_count_ += 1;
+      if (step_count_ % int(ref_sampling_time_ / control_dt_ + 0.0001) == 0)
+        updateReference();
+    }
     updateObservation();
 
     Eigen::Vector3d delta_ouzel_ref_position_offset_diff;
@@ -236,10 +276,11 @@ public:
       delta_ouzel_ref_position_offset_diff = Eigen::Vector3d::Zero();
     } else {
       delta_ouzel_ref_position_offset_diff =
-          delta_ouzel_ref_position_offset -
+          delta_ouzel_ref_position_offset_W -
           delta_ouzel_ref_position_offset_previous_;
     }
-    delta_ouzel_ref_position_offset_previous_ = delta_ouzel_ref_position_offset;
+    delta_ouzel_ref_position_offset_previous_ =
+        delta_ouzel_ref_position_offset_W;
 
     Eigen::Vector3d ref_delta_joint_pos_diff;
     if (ref_delta_joint_pos_previous_ == Eigen::Vector3d::Zero()) {
@@ -250,29 +291,54 @@ public:
     }
     ref_delta_joint_pos_previous_ = ref_delta_joint_pos_diff;
 
-    // get rewards
+    Eigen::Vector3d delta_ouzel_ref_position_offset_neutral_W =
+        ouzel_orientation_W_B_gt_.normalized().toRotationMatrix() *
+        delta_ouzel_ref_position_offset_neutral_B;
+
+    /// compute rewards
     double waypoint_dist_delta, error_angle;
     computeErrorMetrics(waypoint_dist_delta, error_angle);
     Eigen::AngleAxisd ref_ouzel_orientation_corr_angle_axis(
         ref_ouzel_orientation_corr);
     rewards_.record("waypointDist", float(waypoint_dist_delta));
     rewards_.record("orientError", float(error_angle));
+    rewards_.record("commandThrust",
+                    float((controller_orient_W_B.toRotationMatrix() *
+                               wrench_command.thrust -
+                           gravity_compensation_thrust_W_)
+                              .squaredNorm()));
+    rewards_.record("commandTorque",
+                    float(wrench_command.torque.squaredNorm()));
     rewards_.record("deltaOuzelRefPositionOffset",
-                    float(delta_ouzel_ref_position_offset.squaredNorm()));
+                    float((delta_ouzel_ref_position_offset_W -
+                           delta_ouzel_ref_position_offset_neutral_W)
+                              .squaredNorm()));
     rewards_.record("deltaOuzelRefPositionOffsetDiff",
                     float(delta_ouzel_ref_position_offset_diff.squaredNorm()));
     rewards_.record("orientRefCorr",
                     float(ref_ouzel_orientation_corr_angle_axis.angle()));
-    rewards_.record("deltaJointAngles",
-                    float(std::abs(ref_delta_joint_pos(0)) +
-                          std::abs(ref_delta_joint_pos(1)) +
-                          std::abs(ref_delta_joint_pos(2))));
-    rewards_.record("deltaJointAnglesDiff",
-                    float(ref_delta_joint_pos_diff.squaredNorm()));
     rewards_.record(
-        "deltaJointAnglesClamp",
-        float((ref_delta_joint_pos - ref_delta_joint_pos_clamped).norm()));
+        "deltaJointAngles",
+        float((ref_delta_joint_pos - delta_joint_angles_neutral_).norm()));
+    rewards_.record("deltaJointAnglesRaw",
+                    float(ref_delta_joint_pos_raw.squaredNorm()));
+    rewards_.record("deltaJointAngularVel",
+                    float(delta_joint_angular_vel_.norm()));
     return rewards_.sum();
+  }
+
+  void updateReference() {
+    ref_delta_position_ = init_position_;
+    double time = step_count_ * control_dt_;
+    ref_delta_position_[linear_dir_] += lateral_speed_ * time;
+    ref_delta_position_[oscillation_dir_] +=
+        sinus_amplitude_ * std::sin(sinus_angular_freq_ * time + sinus_offset_);
+    if (visualizable_ && render_) {
+      delta_ee_ref_marker_->setPosition(ref_delta_position_(0),
+                                        ref_delta_position_(1),
+                                        ref_delta_position_(2));
+    }
+    controller_.setRef(ref_delta_position_, ref_ouzel_orientation_);
   }
 
   void updateObservation() {
@@ -336,7 +402,7 @@ public:
         ouzel_orientation_W_B_mat.col(2), ouzel_linear_vel_B_,
         ouzel_angular_vel_B_, ref_ouzel_orientation_mat.col(0),
         ref_ouzel_orientation_mat.col(1), ref_ouzel_orientation_mat.col(2),
-        delta_joint_angle_, delta_joint_angular_vel_;
+        delta_joint_angle_, delta_joint_angular_vel_, ref_delta_position_;
     ob = ob_double.cast<float>();
     if (!Eigen::isfinite(ob.array()).all()) {
       std::cout << "ob is nan: " << ob << std::endl;
@@ -377,20 +443,24 @@ public:
 
 private:
   void resetInitialConditions() {
-    Eigen::Vector3d init_position(unifDistPlusMinusOne_(gen_),
-                                  unifDistPlusMinusOne_(gen_),
-                                  unifDistPlusMinusOne_(gen_));
-    ouzel_position_W_ = init_position;
-
-    Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_),
+    init_position_ = Eigen::Vector3d(unifDistPlusMinusOne_(gen_),
                                      unifDistPlusMinusOne_(gen_),
                                      unifDistPlusMinusOne_(gen_));
-    init_orientation.normalize();
-    double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
-    Eigen::Quaterniond init_quaternion(
-        Eigen::AngleAxisd(init_angle, init_orientation));
-    init_quaternion.normalize();
-    ouzel_orientation_W_B_ = init_quaternion;
+    ouzel_position_W_ = init_position_;
+
+    if (is_sinus_traj_) {
+      ouzel_orientation_W_B_ = Eigen::Quaterniond::Identity();
+    } else {
+      Eigen::Vector3d init_orientation(unifDistPlusMinusOne_(gen_),
+                                       unifDistPlusMinusOne_(gen_),
+                                       unifDistPlusMinusOne_(gen_));
+      init_orientation.normalize();
+      double init_angle = unifDistPlusMinusOne_(gen_) * M_PI;
+      Eigen::Quaterniond init_quaternion(
+          Eigen::AngleAxisd(init_angle, init_orientation));
+      init_quaternion.normalize();
+      ouzel_orientation_W_B_ = init_quaternion;
+    }
 
     Eigen::Vector3d init_lin_vel_dir(unifDistPlusMinusOne_(gen_),
                                      unifDistPlusMinusOne_(gen_),
@@ -431,28 +501,63 @@ private:
     delta_sym_->setJointAngles(init_joint_angles);
 
     // reset reference
-    Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_),
-                                       unifDistPlusMinusOne_(gen_),
-                                       unifDistPlusMinusOne_(gen_));
-    ref_delta_position.normalize();
-    ref_delta_position_ = ouzel_position_W_ + initialDistanceOffset_ *
-                                                  unifDistPlusMinusOne_(gen_) *
-                                                  ref_delta_position;
+    if (is_sinus_traj_) {
+      linear_dir_ = int(std::abs(unifDistPlusMinusOne_(gen_)) * 2.999);
+      bool oscillation_dir_proxy = std::signbit(unifDistPlusMinusOne_(gen_));
+      std::vector<int> all_oscillation_dir{2, 0, 1, 2, 0};
+      oscillation_dir_ =
+          all_oscillation_dir[linear_dir_ + 1 + int(oscillation_dir_proxy) -
+                              int(!oscillation_dir_proxy)];
 
-    Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_),
-                                          unifDistPlusMinusOne_(gen_),
-                                          unifDistPlusMinusOne_(gen_));
-    ref_delta_orientation.normalize();
-    double ref_delta_angle =
-        unifDistPlusMinusOne_(gen_) * initialAngularOffset_;
-    Eigen::Quaterniond ref_delta_quaternion(
-        Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
-    ref_delta_quaternion.normalize();
-    Eigen::Quaterniond ref_quaternion =
-        ouzel_orientation_W_B_ * ref_delta_quaternion;
-    ref_quaternion.normalize();
-    ref_ouzel_orientation_ = ref_quaternion;
+      sinus_amplitude_ = std::abs(unifDistPlusMinusOne_(gen_)) *
+                             (max_sinus_amplitude_ - min_sinus_amplitude_) +
+                         min_sinus_amplitude_;
+      lateral_speed_ = std::abs(unifDistPlusMinusOne_(gen_)) *
+                           (max_lateral_speed_ - min_lateral_speed_) +
+                       min_lateral_speed_;
+      double sinus_wavelength =
+          std::abs(unifDistPlusMinusOne_(gen_)) *
+              (max_sinus_wavelength_ - min_sinus_wavelength_) +
+          min_sinus_wavelength_;
+      sinus_offset_ = unifDistPlusMinusOne_(gen_) * M_PI;
+      sinus_angular_freq_ = 2 * M_PI * lateral_speed_ / sinus_wavelength;
+      step_count_ = 0;
 
+      ref_delta_position_ = ouzel_position_W_;
+      ref_ouzel_orientation_ = ouzel_orientation_W_B_;
+    } else {
+      Eigen::Vector3d ref_delta_position(unifDistPlusMinusOne_(gen_),
+                                         unifDistPlusMinusOne_(gen_),
+                                         unifDistPlusMinusOne_(gen_));
+      ref_delta_position.normalize();
+      ref_delta_position_ =
+          ouzel_position_W_ + initialDistanceOffset_ *
+                                  unifDistPlusMinusOne_(gen_) *
+                                  ref_delta_position;
+
+      Eigen::Vector3d ref_delta_orientation(unifDistPlusMinusOne_(gen_),
+                                            unifDistPlusMinusOne_(gen_),
+                                            unifDistPlusMinusOne_(gen_));
+      ref_delta_orientation.normalize();
+      double ref_delta_angle =
+          unifDistPlusMinusOne_(gen_) * initialAngularOffset_;
+      Eigen::Quaterniond ref_delta_quaternion(
+          Eigen::AngleAxisd(ref_delta_angle, ref_delta_orientation));
+      ref_delta_quaternion.normalize();
+      Eigen::Quaterniond ref_quaternion =
+          ouzel_orientation_W_B_ * ref_delta_quaternion;
+      ref_quaternion.normalize();
+      ref_ouzel_orientation_ = ref_quaternion;
+    }
+    if (visualizable_ && render_) {
+      delta_ee_ref_marker_->setPosition(ref_delta_position_(0),
+                                        ref_delta_position_(1),
+                                        ref_delta_position_(2));
+      Eigen::Vector4d quat(
+          ref_ouzel_orientation_.w(), ref_ouzel_orientation_.x(),
+          ref_ouzel_orientation_.y(), ref_ouzel_orientation_.z());
+      delta_ee_ref_marker_->setOrientation(quat);
+    }
     controller_.setRef(ref_delta_position_, ref_ouzel_orientation_);
   }
 
@@ -497,6 +602,7 @@ private:
   double terminalSuccessAngleError_;
   double terminalSuccessLinearVel_;
   double terminalSuccessAngularVel_;
+  Eigen::Vector3d init_position_;
   Eigen::Vector3d ouzel_position_W_, ouzel_linear_vel_B_, ouzel_angular_vel_B_,
       delta_joint_angle_, delta_joint_angular_vel_;
   Eigen::Quaterniond ouzel_orientation_W_B_;
@@ -508,26 +614,50 @@ private:
   Eigen::Quaterniond ref_ouzel_orientation_;
   Eigen::Vector3d delta_ouzel_ref_position_offset_previous_;
   Eigen::Vector3d ref_delta_joint_pos_previous_;
+  Eigen::Vector3d gravity_compensation_thrust_W_;
 
   rw_omav_controllers::ImpedanceControlModule controller_;
 
   raisim_sensors::odometry odometry_;
 
   delta_dynamics::DeltaController *delta_sym_;
-  raisim::Cylinder *delta_eef_;
+  raisim::Visuals *delta_eef_;
+  raisim::Visuals *omav_ref_marker_;
+  raisim::Visuals *delta_ee_ref_marker_;
   Eigen::Vector3d ee_vel_prev_;
   Eigen::Vector3d B_om_WB_prev_;
   Eigen::Vector3d pos_offset_BD_;
   Eigen::Quaterniond ang_offset_BD_;
-  double delta_min_joint_angle_ = 0.0;
-  double delta_max_joint_angle_ = 1.5; // rad
+  //  double delta_min_joint_angle_ = 0.0;
+  double delta_max_joint_angle_ = 1.4; // rad
   Eigen::Vector3d delta_position_W_;
   Eigen::Vector3d delta_position_W_gt_;
+  Eigen::Vector3d delta_joint_angles_neutral_;
 
   int baseLink_;
 
+  Eigen::Vector3d delta_ouzel_ref_position_offset_neutral_B;
+
   float time_in_success_state_;
   float min_time_in_success_state_;
+
+  int linear_dir_;
+  int oscillation_dir_;
+
+  double sinus_amplitude_;
+  double lateral_speed_;
+  double sinus_angular_freq_;
+  double sinus_offset_;
+  double min_sinus_amplitude_;
+  double max_sinus_amplitude_;
+  double min_lateral_speed_;
+  double max_lateral_speed_;
+  double min_sinus_wavelength_;
+  double max_sinus_wavelength_;
+  float ref_sampling_time_;
+  int step_count_;
+  double sinus_traj_share_;
+  bool is_sinus_traj_;
 
   thread_local static std::mt19937 gen_;
   std::uniform_real_distribution<double> unifDistPlusMinusOne_;
