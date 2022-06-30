@@ -9,6 +9,11 @@ import torch
 import argparse
 import numpy as np
 
+# This script takes a trained policy as input and transforms it so that the network can be used with the
+# pyTorch C++ implementation.
+#
+# run example: $ python model_export.py --weight /home/{user}/catkin_ws/src/raisimLib/raisimGymTorch/data/ouzel_delta_planning/2022-05-27-14-33-19/full_41000.pt --config cfg_1.yaml
+
 
 # configuration
 parser = argparse.ArgumentParser()

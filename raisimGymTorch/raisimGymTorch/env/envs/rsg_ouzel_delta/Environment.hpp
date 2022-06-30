@@ -201,16 +201,6 @@ public:
     Eigen::Vector3d ref_delta_joint_pos =
         (Eigen::tanh(ref_delta_joint_pos_raw.array()) + 1.0) / 2.0 *
         delta_max_joint_angle_;
-    //    Eigen::Vector3d ref_delta_joint_pos_clamped;
-    //    ref_delta_joint_pos_clamped(0) = boost::algorithm::clamp(
-    //        ref_delta_joint_pos(0), delta_min_joint_angle_,
-    //        delta_max_joint_angle_);
-    //    ref_delta_joint_pos_clamped(1) = boost::algorithm::clamp(
-    //        ref_delta_joint_pos(1), delta_min_joint_angle_,
-    //        delta_max_joint_angle_);
-    //    ref_delta_joint_pos_clamped(2) = boost::algorithm::clamp(
-    //        ref_delta_joint_pos(2), delta_min_joint_angle_,
-    //        delta_max_joint_angle_);
     Eigen::VectorXd odometry_measurement_gt;
     Eigen::Vector3d force_B, torque_B;
     Eigen::Vector3d ee_pos, ee_vel, ee_acc, eef_pos_W;

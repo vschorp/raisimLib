@@ -19,8 +19,11 @@ To run this part, please use the anaconda environment which is described in `con
 ### Test policy
 
 1. Compile raisimgym: ```python setup develop```
-2. run tester.py of the task with policy (for rsg_ouzel
+2. Start the simulation viewer with ```./raisimUnity/linux/raisimUnity.x86_64``` and tick "auto-connect"
+3. run tester.py of the task with policy (for rsg_ouzel
    example): ``` python raisimGymTorch/env/envs/rsg_ouzel/tester.py  --weight data/ouzel_only_planning/2022-05-09-12-17-53/full_123000.pt --config cfg_local.yaml```
+
+The tester script produces plots which can be found in ```data/images```. 
 
 ### Retrain policy
 
