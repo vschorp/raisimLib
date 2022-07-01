@@ -17,6 +17,5 @@ data/ouzel_delta_planning/*
 data/ouzel_only_planning/*
 raisimGymTorch/env/bin/rsg*
 
-!*/
 !data/ouzel_delta_planning/2022-05-27-14-33-19/*
 !data/ouzel_only_planning/2022-05-09-12-17-53/*
